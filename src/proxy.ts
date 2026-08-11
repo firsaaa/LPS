@@ -8,7 +8,15 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+  // Railway (and most PaaS hosts) terminate TLS at their own edge and forward
+  // plain HTTP internally, so the request this middleware sees looks like
+  // http:// even though the client connected over https://. getToken() uses
+  // the request's apparent protocol to decide whether to look for the
+  // `__Secure-`-prefixed cookie NextAuth actually set — without this override
+  // it looks for the wrong cookie name and treats every logged-in user as
+  // logged out. NEXTAUTH_URL is the source of truth for what's actually public.
+  const secureCookie = process.env.NEXTAUTH_URL?.startsWith("https://") ?? false;
+  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET, secureCookie });
   const isLoggedIn = !!token;
   const isLoginPage = pathname.startsWith("/login");
 
