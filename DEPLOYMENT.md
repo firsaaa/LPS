@@ -45,16 +45,12 @@ Di tab **Variables** service aplikasi, isi (lihat `.env.example` untuk penjelasa
 |---|---|
 | `DATABASE_URL` | Reference ke Postgres plugin (Railway biasanya menawarkan ini otomatis — pilih "Add Reference" ke service Postgres) |
 | `NEXTAUTH_SECRET` | Generate baru, **jangan pakai yang di `.env` lokal**. Jalankan `openssl rand -base64 32` di terminal, salin hasilnya |
-| `NEXTAUTH_URL` | URL yang Railway kasih ke service ini, mis. `https://lps-edms-production.up.railway.app` (bisa dicek/diubah setelah deploy pertama, lalu redeploy) |
+| `NEXTAUTH_URL` | URL yang Railway kasih ke service ini — punya proyek ini: `https://lps-edms-web-production.up.railway.app` (kalau nanti ganti domain, update ini lalu redeploy) |
 | `UPLOAD_DIR` | `/app/uploads` (harus sama persis dengan mount path volume di langkah 4) |
 | `NODE_ENV` | `production` |
 
-### 6. Set Start Command
-Di tab **Settings** service aplikasi → **Deploy** → **Custom Start Command**, isi:
-```
-npm run start:prod
-```
-Ini menjalankan `prisma migrate deploy` otomatis setiap kali deploy (memastikan skema database selalu sinkron) sebelum menyalakan server — kamu tidak perlu menjalankan migrasi manual.
+### 6. Start Command
+Sudah otomatis lewat `railway.json` di root repo — Railway membacanya sendiri, tidak perlu diisi manual di dashboard. Isinya `npm run start:prod`, yang menjalankan `prisma migrate deploy` otomatis setiap kali deploy (memastikan skema database selalu sinkron) sebelum menyalakan server.
 
 ### 7. Deploy
 Railway otomatis build & jalankan setelah semua variable diisi. Pantau tab **Deployments** untuk log build/start.
