@@ -1,0 +1,427 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+// 5 peran (menggantikan GlobalRole + ProjectRole, keduanya dihapus di migrasi
+// role_model_drop_legacy_roles; AUDITOR pensiun tanpa pengganti).
+// SUPERADMIN dan INSPECTOR selalu global (project_id NULL di UserRole).
+// TEAM_LEADER, ENGINEER, CLIENT selalu terikat proyek.
+enum Role {
+  SUPERADMIN
+  TEAM_LEADER
+  ENGINEER
+  INSPECTOR
+  CLIENT
+}
+
+enum ProjectStatus {
+  PLANNING
+  ACTIVE
+  DELAYED
+  COMPLETED
+  ARCHIVED
+}
+
+// Urutan fase sesuai alur kerja LPS (IEC 62305)
+enum LpsPhase {
+  INISIASI
+  ASSESSMENT
+  DESIGN
+  IMPLEMENTASI
+  COMMISSIONING
+  INSPEKSI_BERKALA
+}
+
+// Alur: DRAFT -> UNDER_REVIEW -> APPROVED -> ARCHIVED, dengan REVISION_REQUESTED
+// dan REJECTED sebagai hasil review yang mengembalikan/menghentikan dokumen.
+// SUBMITTED (versi lama) dihapus — "mengajukan" sekarang langsung memindahkan
+// DRAFT -> UNDER_REVIEW, tidak ada status antara.
+enum DocumentStatus {
+  DRAFT
+  UNDER_REVIEW
+  APPROVED
+  REVISION_REQUESTED
+  REJECTED
+  ARCHIVED
+}
+
+// Dokumen otomatis INTERNAL (Team Leader + Engineer) begitu diupload — bukan
+// pilihan yang harus dibuat saat upload. Team Leader lalu bisa MENAMBAH akses
+// lewat dua toggle independen (lihat DocumentDetailClient): Auditor dan/atau
+// Client. Keempat kombinasi hasil dari dua toggle itu = keempat nilai di bawah
+// (lihat VISIBILITY_VIEWERS di document.service.ts untuk siapa melihat apa).
+enum DocumentVisibility {
+  INTERNAL           // Team Leader + Engineer (baseline)
+  AUDITOR_ACCESSIBLE // + Auditor
+  CLIENT_ACCESSIBLE  // + Client
+  ALL_ACCESSIBLE     // + Auditor + Client
+}
+
+// Tipe dokumen berstruktur + catch-all FILE_UPLOAD
+// DEPRECATED: digantikan oleh DocumentTypeMaster (13 tipe, lihat migrasi
+// add_document_metadata). Dipertahankan aditif sampai API/UI dialihkan.
+enum DocumentType {
+  LAPORAN_ASSESSMENT_RISIKO
+  LOG_COMMISSIONING
+  LAPORAN_INSPEKSI_BERKALA
+  FILE_UPLOAD
+}
+
+// Aksi bermakna saja — view/login tidak dicatat
+enum AuditAction {
+  CREATE
+  EDIT
+  SUBMIT
+  APPROVE
+  REVISE
+  DELETE
+  ASSIGN
+  REVIEW
+  PHASE_CHANGE
+  REJECT
+  ARCHIVE
+}
+
+enum ActionItemStatus {
+  OPEN
+  CLOSED
+}
+
+// ─── Users ────────────────────────────────────────────────────────────────────
+
+model User {
+  id             String      @id @default(cuid())
+  name           String
+  email          String      @unique
+  passwordHash   String      @map("password_hash")
+  canLeadProject Boolean     @default(false) @map("can_lead_project")
+  isActive       Boolean     @default(true) @map("is_active")
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+
+  roles               UserRole[]
+  createdProjects     Project[]
+  assignedDocuments   Document[]        @relation("AssignedDocuments")
+  reviewedDocuments   Document[]        @relation("ReviewedDocuments")
+  uploadedDocuments   Document[]        @relation("UploadedDocuments")
+  documentVersions    DocumentVersion[]
+  approvedVersions    DocumentVersion[] @relation("ApprovedVersions")
+  assignedTags        DocumentTag[]
+  auditLogs           AuditLog[]
+  createdNotulen      Notulen[]         @relation("CreatedNotulen")
+  assignedActionItems ActionItem[]      @relation("AssignedActionItems")
+  createdMilestones   Milestone[]
+
+  @@map("users")
+}
+
+// ─── Projects ─────────────────────────────────────────────────────────────────
+
+model Project {
+  id            String        @id @default(cuid())
+  name          String
+  // 3-letter code derived from name initials, used as the project segment
+  // in document codes ({KODE_PROYEK}-{KODE_FASE}-{KODE_JENIS}-{URUT}).
+  // Nullable until backfilled for existing projects.
+  projectCode   String?       @unique @map("project_code")
+  description   String?
+  client        String
+  location      String?
+  status        ProjectStatus @default(PLANNING)
+  startDate     DateTime?     @map("start_date")
+  targetEndDate DateTime?     @map("target_end_date")
+  actualEndDate DateTime?     @map("actual_end_date")
+  createdById   String        @map("created_by_id")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  createdBy User            @relation(fields: [createdById], references: [id])
+  userRoles UserRole[]
+  phases    ProjectPhase[]
+  documents Document[]
+  auditLogs AuditLog[]
+  notulen   Notulen[]
+  milestones Milestone[]
+
+  @@map("projects")
+}
+
+// Titik-tolok proyek bebas-bentuk (mis. "Serah Terima Lahan", "Mulai Instalasi
+// Down Conductor") — berbeda dari 6 fase tetap IEC 62305 (LpsPhase), yang
+// jumlah & urutannya baku. Milestone tidak diperlukan dokumen tertentu; hanya
+// penanda tanggal target + selesai/belum, dikelola bebas oleh Team Leader.
+model Milestone {
+  id          String    @id @default(cuid())
+  projectId   String    @map("project_id")
+  title       String
+  // What "done" means for this milestone — free text, since the work behind
+  // a milestone (e.g. "kickoff selesai") rarely maps to a single field.
+  description String?   @db.Text
+  // Optional link to the LPS phase this milestone tracks, so "Milestone 1 =
+  // selesaikan fase Assessment" is an actual relationship, not just two
+  // separate pieces of text that happen to be about the same thing.
+  phase       LpsPhase?
+  targetDate  DateTime? @map("target_date")
+  isCompleted Boolean   @default(false) @map("is_completed")
+  completedAt DateTime? @map("completed_at")
+  createdById String    @map("created_by_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy User    @relation(fields: [createdById], references: [id])
+
+  @@index([projectId])
+  @@map("milestones")
+}
+
+// Menggantikan ProjectMember.projectRole + User.globalRole.
+// project_id NULL = cakupan global (SUPERADMIN, INSPECTOR).
+model UserRole {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  projectId String?  @map("project_id")
+  role      Role
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId, role])
+  @@map("user_roles")
+}
+
+// ─── Phases ───────────────────────────────────────────────────────────────────
+
+// Tiap proyek punya instance fase sendiri; is_active menandai fase dalam scope kontrak
+model ProjectPhase {
+  id        String   @id @default(cuid())
+  projectId String   @map("project_id")
+  phase     LpsPhase
+  isActive  Boolean  @default(false) @map("is_active")
+  isSkipped Boolean  @default(false) @map("is_skipped")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  documents Document[]
+
+  @@unique([projectId, phase])
+  @@map("project_phases")
+}
+
+// Seed/config table — daftar dokumen wajib per fase
+// Fase dianggap "lengkap" bila semua is_optional=false berstatus APPROVED
+model PhaseRequiredDocument {
+  id             String              @id @default(cuid())
+  phase          LpsPhase
+  documentType   DocumentType        @map("document_type")
+  documentTypeId String?             @map("document_type_id")
+  label          String
+  isOptional     Boolean             @default(false) @map("is_optional")
+
+  documentTypeMaster DocumentTypeMaster? @relation(fields: [documentTypeId], references: [id])
+
+  @@map("phase_required_documents")
+}
+
+// Master 13 tipe dokumen (menggantikan enum DocumentType — lihat catatan di
+// atas). type_code dikunci NOT NULL + UNIQUE pada migrasi document code
+// generation (Tahap 4), setelah backfill memastikan tidak ada NULL.
+model DocumentTypeMaster {
+  id                   String   @id @default(cuid())
+  typeCode             String   @unique @map("type_code")
+  name                 String
+  retentionPeriodYears Int?     @map("retention_period_years")
+  retentionTrigger     String?  @map("retention_trigger")
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  documents              Document[]
+  phaseRequiredDocuments PhaseRequiredDocument[]
+  requiredByActionItems  ActionItem[]
+
+  @@map("document_types")
+}
+
+// ─── Documents ────────────────────────────────────────────────────────────────
+
+model Document {
+  id             String             @id @default(cuid())
+  // Denormalized from projectPhase.projectId — added for direct project-scoped
+  // querying/indexing (search, retention reports) without a phase join.
+  projectId      String?            @map("project_id")
+  projectPhaseId String             @map("project_phase_id")
+  documentType   DocumentType       @map("document_type")
+  documentTypeId String?            @map("document_type_id")
+  documentCode   String             @unique @map("document_code")
+  title          String
+  description    String?            @db.Text
+  visibility     DocumentVisibility @default(INTERNAL) @map("visibility")
+  status         DocumentStatus     @default(DRAFT) @map("status")
+  filePath       String?            @map("file_path")
+  // Extracted plain text of the current version's file (PDF/DOCX/XLSX/PPTX),
+  // refreshed on every new version — powers content search (FR full-text).
+  contentText    String?            @db.Text @map("content_text")
+  // Postgres-generated (STORED) from contentText, kept in sync automatically —
+  // never written to from Prisma. Backs the GIN index below so content search
+  // stays fast regardless of how much text/how many documents accumulate,
+  // instead of a per-query ILIKE scan over every row's full text.
+  contentTsv     Unsupported("tsvector")? @map("content_tsv")
+  // True while a scanned/image-only PDF is being OCR'd in the background
+  // (Tesseract is too slow to run synchronously during upload).
+  contentTextPending Boolean        @default(false) @map("content_text_pending")
+  dueDate        DateTime?          @map("due_date")
+  retentionUntil DateTime?          @map("retention_until")
+  legalHold      Boolean            @default(false) @map("legal_hold")
+  assignedToId   String?            @map("assigned_to_id")
+  reviewedById   String?            @map("reviewed_by_id")
+  reviewedAt     DateTime?          @map("reviewed_at")
+  uploadedById   String             @map("uploaded_by_id")
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+
+  project            Project?             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectPhase       ProjectPhase         @relation(fields: [projectPhaseId], references: [id], onDelete: Cascade)
+  documentTypeMaster DocumentTypeMaster?  @relation(fields: [documentTypeId], references: [id])
+  assignedTo      User?                @relation("AssignedDocuments", fields: [assignedToId], references: [id])
+  reviewedBy      User?                @relation("ReviewedDocuments", fields: [reviewedById], references: [id])
+  uploadedBy      User                 @relation("UploadedDocuments", fields: [uploadedById], references: [id])
+  versions        DocumentVersion[]
+  linkedActionItems ActionItem[]       @relation("LinkedActionItems")
+  tags            DocumentTag[]
+
+  @@index([projectId, documentTypeId])
+  // projectPhaseId was an unindexed FK — every per-project document list/search
+  // (workspace, dashboard, advanced search) filtered on it, forcing a sequential
+  // scan across ALL documents in the database, worsening as the whole system's
+  // document count grew (not just this project's).
+  @@index([projectPhaseId, createdAt])
+  @@index([status, updatedAt])
+  @@index([assignedToId, status])
+  @@index([contentTsv], type: Gin)
+  @@map("documents")
+}
+
+// Tiap revisi = record baru; tidak ada update/overwrite
+model DocumentVersion {
+  id            String    @id @default(cuid())
+  documentId    String    @map("document_id")
+  versionNumber Int       @map("version_number")
+  filePath      String?   @map("file_path")
+  fieldSnapshot Json?     @map("field_snapshot")
+  changeNotes   String?   @map("change_notes") @db.Text
+  isCurrent     Boolean   @default(false) @map("is_current")
+  // DRAFT | IN_REVIEW | APPROVED | SUPERSEDED | OBSOLETE
+  status        String    @default("DRAFT") @map("status")
+  approvedById  String?   @map("approved_by_id")
+  approvedAt    DateTime? @map("approved_at")
+  createdById   String    @map("created_by_id")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdBy  User     @relation(fields: [createdById], references: [id])
+  approvedBy User?    @relation("ApprovedVersions", fields: [approvedById], references: [id])
+
+  @@unique([documentId, versionNumber])
+  @@index([documentId, isCurrent])
+  @@map("document_versions")
+}
+
+// ─── Tags ─────────────────────────────────────────────────────────────────────
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+
+  documents DocumentTag[]
+
+  @@map("tags")
+}
+
+model DocumentTag {
+  documentId   String   @map("document_id")
+  tagId        String   @map("tag_id")
+  assignedById String   @map("assigned_by_id")
+  assignedAt   DateTime @default(now()) @map("assigned_at")
+
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  tag        Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  assignedBy User     @relation(fields: [assignedById], references: [id])
+
+  @@id([documentId, tagId])
+  @@map("document_tags")
+}
+
+// ─── Audit Trail ──────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id        String      @id @default(cuid())
+  actorId   String?     @map("actor_id")
+  action    AuditAction
+  entity    String
+  entityId  String?     @map("entity_id")
+  projectId String?     @map("project_id")
+  detail    Json?
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  actor   User?    @relation(fields: [actorId], references: [id])
+  project Project? @relation(fields: [projectId], references: [id])
+
+  @@map("audit_logs")
+}
+
+// ─── Notulen (Minutes of Meeting) ─────────────────────────────────────────────
+
+model Notulen {
+  id          String   @id @default(cuid())
+  projectId   String   @map("project_id")
+  title       String
+  // Free text on purpose — a fixed preset (Kickoff/Progress/Evaluasi/...) is
+  // offered in the UI, but "Lainnya" lets the user type anything, so this
+  // column has to accept any value rather than being an enum.
+  meetingType String?  @map("meeting_type")
+  meetingDate DateTime @map("meeting_date")
+  location    String?
+  attendees   String?
+  discussion  String?  @db.Text
+  filePath    String?  @map("file_path")
+  createdById String   @map("created_by_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy   User         @relation("CreatedNotulen", fields: [createdById], references: [id])
+  actionItems ActionItem[]
+
+  @@map("notulen")
+}
+
+model ActionItem {
+  id               String           @id @default(cuid())
+  notulenId        String           @map("notulen_id")
+  description      String
+  assignedToId     String?          @map("assigned_to_id")
+  deadline         DateTime?
+  status           ActionItemStatus @default(OPEN)
+  closedAt         DateTime?        @map("closed_at")
+  closedNote       String?          @map("closed_note") @db.Text
+  linkedDocumentId String?          @map("linked_document_id")
+  // Optional document REQUIREMENT ("upload X for phase Y by this deadline"),
+  // distinct from linkedDocumentId which is the evidence attached on close.
+  requiredPhase         LpsPhase? @map("required_phase")
+  requiredDocumentTypeId String?  @map("required_document_type_id")
+  createdAt        DateTime         @default(now()) @map("created_at")
+
+  notulen        Notulen   @relation(fields: [notulenId], references: [id], onDelete: Cascade)
+  assignedTo     User?     @relation("AssignedActionItems", fields: [assignedToId], references: [id])
+  linkedDocument Document? @relation("LinkedActionItems", fields: [linkedDocumentId], references: [id])
+  requiredDocumentType DocumentTypeMaster? @relation(fields: [requiredDocumentTypeId], references: [id])
+
+  @@map("action_items")
+}

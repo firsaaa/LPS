@@ -1,0 +1,50 @@
+%PDF-1.4
+1 0 obj <</Type/Catalog/Pages 2 0 R>> endobj
+2 0 obj <</Type/Pages/Kids[4 0 R]/Count 1>> endobj
+3 0 obj <</Type/Font/Subtype/Type1/BaseFont/Helvetica>> endobj
+4 0 obj <</Type/Page/Parent 2 0 R/Resources<</Font<</F1 3 0 R>>>>/MediaBox[0 0 612 792]/Contents 5 0 R>> endobj
+5 0 obj <</Length 1478>>stream
+BT /F1 11 Tf 50 742 Td 14 TL
+(LAPORAN ASSESSMENT RISIKO RS HARAPAN BUNDA) Tj
+T* () Tj
+T* (LAPORAN ASSESSMENT RISIKO SAMBARAN PETIR) Tj
+T* (Laporan Assessment Risiko RS Harapan Bunda) Tj
+T* () Tj
+T* (1. RINGKASAN) Tj
+T* (Dokumen ini menyajikan hasil kajian risiko sambaran petir eksternal terhadap objek sesuai) Tj
+T* (metodologi IEC 62305-2, sebagai dasar penentuan kebutuhan dan tingkat proteksi petir) Tj
+T* (\(Lightning Protection Level\).) Tj
+T* () Tj
+T* (2. DATA & PARAMETER) Tj
+T* (Kerapatan sambaran petir ke tanah \(Ng\) ditentukan berdasarkan data isokeraunik wilayah) Tj
+T* (setempat. Dimensi bangunan, faktor lingkungan, dan jenis struktur turut menjadi parameter) Tj
+T* (perhitungan area ekivalen tangkapan sambaran \(Ad\).) Tj
+T* () Tj
+T* (3. PERHITUNGAN RISIKO) Tj
+T* (Risiko R1 \(risiko kehilangan nyawa manusia\) dihitung dan dibandingkan terhadap risiko yang) Tj
+T* (dapat diterima \(tolerable risk, RT = 1e-5\). Apabila R1 > RT, maka instalasi sistem) Tj
+T* (proteksi petir menjadi wajib.) Tj
+T* () Tj
+T* (4. REKOMENDASI TINGKAT PROTEKSI) Tj
+T* (Berdasarkan hasil perhitungan, direkomendasikan Tingkat Proteksi Petir \(LPL\) beserta) Tj
+T* (radius bola bergulir \(rolling sphere radius\) yang sesuai untuk desain sistem terminasi) Tj
+T* (udara pada fase berikutnya.) Tj
+T* () Tj
+T* (5. KESIMPULAN) Tj
+T* (Hasil assessment ini menjadi acuan utama pada tahap desain sistem proteksi petir eksternal) Tj
+T* (maupun internal \(SPD\) pada proyek ini.) Tj
+T* () Tj
+ET
+endstream endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000054 00000 n 
+0000000105 00000 n 
+0000000168 00000 n 
+0000000280 00000 n 
+trailer<</Size 6/Root 1 0 R>>
+startxref
+1807
+%%EOF
