@@ -1,0 +1,7 @@
+endpoint,jumlah_koneksi,req_per_detik,throughput_kbs,latensi_rata2_ms,latensi_p50_ms,latensi_p97_5_ms,latensi_p99_ms,latensi_max_ms,total_request,jumlah_gagal,jumlah_timeout
+dashboard,5,47.14,207.7,105.49,84,267,321,487,1414,0,0
+dashboard,10,79.14,348.8,125.87,109,251,281,395,2374,0,0
+dashboard,20,113,498.0,176.23,165,307,332,388,3390,0,0
+search,5,59,1240.0,84.15,68,196,289,570,1770,0,0
+search,10,76.2,1601.6,130.27,115,300,402,820,2286,0,0
+search,20,101.4,2130.9,195.51,182,407,551,902,3042,0,0
