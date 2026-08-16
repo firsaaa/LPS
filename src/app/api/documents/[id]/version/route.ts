@@ -11,6 +11,7 @@ import {
   notFound,
 } from "@/lib/api-helpers";
 import { getDocumentWithProject, listDocumentVersions, createDocumentVersion, canViewDocument } from "@/lib/services/document.service";
+import { parseMultipartUpload, cleanupTempUpload } from "@/lib/upload-stream";
 import { MAX_UPLOAD_SIZE_BYTES } from "@/types";
 
 /** GET /api/documents/[id]/version — list all versions */
@@ -57,19 +58,20 @@ export async function POST(
     if (role !== "ENGINEER" && role !== "TEAM_LEADER") return forbidden();
   }
 
-  const formData = await req.formData();
-  const file = formData.get("file") as File | null;
-  const changeNotes = formData.get("changeNotes") as string | null;
-
+  const parsed = await parseMultipartUpload(req, {
+    maxFileBytes: MAX_UPLOAD_SIZE_BYTES,
+    isAllowedFilename: isAllowedUploadFilename,
+  });
+  if ("error" in parsed) {
+    return badRequest(parsed.error === "too_large" ? "Ukuran file maksimal 200MB" : "Tipe file tidak didukung");
+  }
+  const { fields, file } = parsed;
   if (!file) return badRequest("File wajib diupload");
-  if (file.size > MAX_UPLOAD_SIZE_BYTES) return badRequest("Ukuran file maksimal 200MB");
-  if (!isAllowedUploadFilename(file.name)) return badRequest("Tipe file tidak didukung");
-
-  const buffer = Buffer.from(await file.arrayBuffer());
+  const changeNotes = fields.changeNotes || null;
 
   const newVersion = await createDocumentVersion({
     documentId, actorId: user.id, projectId,
-    file: { buffer, originalName: file.name },
+    file: { tempPath: file.tempPath, originalName: file.originalName, size: file.size },
     changeNotes,
   });
 

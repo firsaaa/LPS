@@ -4,11 +4,22 @@
 // diberi komentar referensi ke kode UT aslinya untuk kemudahan pemetaan balik
 // ke sheet.
 import { describe, it, expect, afterAll } from "vitest";
+import { writeFileSync } from "fs";
+import { tmpdir } from "os";
+import path from "path";
 import { attachCompleteness, attachProjectSummary } from "@/lib/services/project.service";
 import { canViewDocument, visibilityAllowlist, getNextVersionNumber } from "@/lib/services/document.service";
 import { isStaleDailyReport, isMeetingGapWarning, isActionItemOverdue } from "@/lib/cadence";
 import { getUserProjectRole } from "@/lib/api-helpers";
 import { prisma } from "@/lib/prisma";
+
+// createDocumentVersion() takes a path to an already-on-disk temp file (see
+// upload-stream.ts) rather than a Buffer — this writes one for the test.
+function fixtureUploadFile(content: string, name: string) {
+  const tempPath = path.join(tmpdir(), `ut18-${Date.now()}-${name}`);
+  writeFileSync(tempPath, content);
+  return { tempPath, originalName: name, size: Buffer.byteLength(content) };
+}
 
 // Seed IDs nyata (lihat prisma/seed.ts) — dipakai untuk UT yang butuh akses DB (RBAC).
 const RINA_ENGINEER_ID = "cmsexidiq000qf4rjqrqbphqw";
@@ -202,15 +213,15 @@ describe("Versioning Dokumen — createDocumentVersion() (isCurrent) [UT-18]", (
 
     await createDocumentVersion({
       documentId: doc.id, actorId: RINA_ENGINEER_ID, projectId: PROJECT_TOWER_A_ID,
-      file: { buffer: Buffer.from("v1"), originalName: "v1.txt" }, changeNotes: "v1",
+      file: fixtureUploadFile("v1", "v1.txt"), changeNotes: "v1",
     });
     await createDocumentVersion({
       documentId: doc.id, actorId: RINA_ENGINEER_ID, projectId: PROJECT_TOWER_A_ID,
-      file: { buffer: Buffer.from("v2"), originalName: "v2.txt" }, changeNotes: "v2",
+      file: fixtureUploadFile("v2", "v2.txt"), changeNotes: "v2",
     });
     const v3 = await createDocumentVersion({
       documentId: doc.id, actorId: RINA_ENGINEER_ID, projectId: PROJECT_TOWER_A_ID,
-      file: { buffer: Buffer.from("v3"), originalName: "v3.txt" }, changeNotes: "v3",
+      file: fixtureUploadFile("v3", "v3.txt"), changeNotes: "v3",
     });
 
     const allVersions = await prisma.documentVersion.findMany({ where: { documentId: doc.id }, orderBy: { versionNumber: "asc" } });

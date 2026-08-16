@@ -29,6 +29,11 @@ const nextConfig: NextConfig = {
   // keeps response times consistent instead of periodically falling off a cliff.
   experimental: {
     turbopackFileSystemCacheForDev: false,
+    // Bawaan Next.js membatasi body request ke 10MB di level proxy/middleware,
+    // jauh di bawah MAX_UPLOAD_SIZE_BYTES (200MB) yang divalidasi di route
+    // upload — tanpa ini, berkas di atas ~10MB gagal (formData() rusak parse)
+    // sebelum kode aplikasi sempat menolaknya dengan pesan yang jelas.
+    proxyClientMaxBodySize: 200 * 1024 * 1024,
   },
 };
 

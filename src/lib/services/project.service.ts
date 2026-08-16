@@ -280,8 +280,27 @@ export async function updateProject(id: string, actor: { id: string; isSuperadmi
   return { project: updated };
 }
 
-export function deleteProject(id: string) {
-  return prisma.project.delete({ where: { id } });
+/**
+ * Deleting a project cascades (schema-level ON DELETE CASCADE) to every one
+ * of its documents, permanently — bypassing the retention/legal-hold logic
+ * deleteOrArchiveDocument() applies when a document is deleted individually
+ * (DRAFT only is hard-deleted, anything else is archived, legal_hold blocks
+ * deletion entirely). Apply that same policy here before the cascade runs:
+ * a project can only be hard-deleted if it has no legal-hold documents and
+ * no document has left DRAFT — i.e. it never accumulated real project
+ * history worth preserving. A project with real history should be archived
+ * (ProjectStatus.ARCHIVED), not deleted.
+ */
+export async function deleteProject(id: string) {
+  const documents = await prisma.document.findMany({
+    where: { projectId: id },
+    select: { legalHold: true, status: true },
+  });
+  if (documents.some((d) => d.legalHold)) return { error: "legal_hold" as const };
+  if (documents.some((d) => d.status !== "DRAFT")) return { error: "has_history" as const };
+
+  await prisma.project.delete({ where: { id } });
+  return { success: true as const };
 }
 
 export function listProjectMembers(projectId: string) {

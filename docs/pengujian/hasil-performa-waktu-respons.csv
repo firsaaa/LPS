@@ -1,0 +1,22 @@
+tingkat,kode,nama_endpoint,path,jumlah_proyek,jumlah_dokumen,median_ms,p95_ms,min_ms,max_ms
+kecil,PF-01,"Dashboard lintas proyek","/api/dashboard",5,100,112.3,186.6,85.1,186.6
+kecil,PF-02,"Detail proyek + ringkasan kelengkapan","/api/projects/cmsvy2wgi000ai6rj9dnfdwxp",5,100,56.1,92.2,48.3,92.2
+kecil,PF-03,"Daftar dokumen proyek","/api/projects/cmsvy2wgi000ai6rj9dnfdwxp/documents",5,100,49.9,62.2,45.0,62.2
+kecil,PF-04,"Pencarian judul dokumen","/api/documents/search?keyword=PERF-Dokumen%20GRD%201-20",5,100,56.0,84.9,40.4,84.9
+kecil,PF-05,"Pencarian isi berkas","/api/documents/search?keyword=KATAKUNCIUJIPERFORMA",5,100,50.9,76.9,15.8,76.9
+kecil,PF-06,"Pusat Kepatuhan (laporan agregat)","/api/laporan?period=all",5,100,90.5,105.3,51.2,105.3
+kecil,PF-07,"Detail dokumen + riwayat versi","/api/documents/cmsvy2wt80014i6rjsjuswusg",5,100,49.4,61.0,42.6,61.0
+sedang,PF-01,"Dashboard lintas proyek","/api/dashboard",20,2000,95.0,111.6,64.3,111.6
+sedang,PF-02,"Detail proyek + ringkasan kelengkapan","/api/projects/cmsvy3dqb000ujerjoumefz0i",20,2000,97.9,192.7,50.9,192.7
+sedang,PF-03,"Daftar dokumen proyek","/api/projects/cmsvy3dqb000ujerjoumefz0i/documents",20,2000,49.6,55.2,42.6,55.2
+sedang,PF-04,"Pencarian judul dokumen","/api/documents/search?keyword=PERF-Dokumen%20KTR%201-100",20,2000,50.9,61.6,38.8,61.6
+sedang,PF-05,"Pencarian isi berkas","/api/documents/search?keyword=KATAKUNCIUJIPERFORMA",20,2000,99.0,119.3,76.1,119.3
+sedang,PF-06,"Pusat Kepatuhan (laporan agregat)","/api/laporan?period=all",20,2000,93.6,110.7,57.5,110.7
+sedang,PF-07,"Detail dokumen + riwayat versi","/api/documents/cmsvy3e6u003wjerj1zywa3pl",20,2000,47.1,49.6,21.4,49.6
+besar,PF-01,"Dashboard lintas proyek","/api/dashboard",30,4500,100.3,165.7,65.1,165.7
+besar,PF-02,"Detail proyek + ringkasan kelengkapan","/api/projects/cmsvy41yb001elgrjdtokxz2e",30,4500,148.5,223.5,87.5,223.5
+besar,PF-03,"Daftar dokumen proyek","/api/projects/cmsvy41yb001elgrjdtokxz2e/documents",30,4500,110.4,346.7,60.8,346.7
+besar,PF-04,"Pencarian judul dokumen","/api/documents/search?keyword=PERF-Dokumen%20CHK%201-150",30,4500,94.1,206.1,60.3,206.1
+besar,PF-05,"Pencarian isi berkas","/api/documents/search?keyword=KATAKUNCIUJIPERFORMA",30,4500,171.0,248.3,94.3,248.3
+besar,PF-06,"Pusat Kepatuhan (laporan agregat)","/api/laporan?period=all",30,4500,109.8,147.4,92.9,147.4
+besar,PF-07,"Detail dokumen + riwayat versi","/api/documents/cmsvy4267005ulgrjmn8bej9r",30,4500,78.3,134.0,48.4,134.0

@@ -1,0 +1,4 @@
+ukuran,ukuran_bytes,status_http,waktu_detik,rss_awal_mb,rss_puncak_mb,rss_naik_mb,jumlah_sampel
+5MB,5242880,201,6.07,193.0,399.7,206.7,49
+50MB,52428800,201,1.74,220.1,220.1,0.0,13
+150MB,157286400,201,10.35,208.2,236.6,28.3,70

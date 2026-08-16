@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getSessionUser, getUserProjectRole, unauthorized, ok, notFound, forbidden } from "@/lib/api-helpers";
+import { getSessionUser, getUserProjectRole, unauthorized, ok, notFound, forbidden, badRequest } from "@/lib/api-helpers";
 import { canAccessProject, getProjectById, updateProject, deleteProject } from "@/lib/services/project.service";
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -41,6 +41,13 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
   if (!user.isSuperadmin) return forbidden();
 
   const { id } = await params;
-  await deleteProject(id);
+  const result = await deleteProject(id);
+  if ("error" in result) {
+    return badRequest(
+      result.error === "legal_hold"
+        ? "Proyek memiliki dokumen yang ditandai wajib disimpan (legal hold) — tidak bisa dihapus"
+        : "Proyek memiliki riwayat dokumen (sudah ada yang bukan draft) — arsipkan proyek ini alih-alih menghapusnya"
+    );
+  }
   return ok({ success: true });
 }

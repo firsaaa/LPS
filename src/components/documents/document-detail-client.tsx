@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { VersionStatusBadge, VERSION_STATUS_LABELS } from "@/components/documents/version-status-badge";
 import { TagInput } from "@/components/documents/tag-input";
 import { DocumentTitle } from "@/components/documents/document-title";
+import { DocumentReferencesPanel } from "@/components/documents/document-references-panel";
 import { handleSessionExpired } from "@/lib/session-expired";
 
 const RETENTION_TRIGGER_LABELS: Record<string, string> = {
@@ -231,6 +232,19 @@ export function DocumentDetailClient({ documentId, userId }: { documentId: strin
             onAdd={addTag}
             onRemove={removeTag}
             readOnly={!canTag}
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm">Penelusuran Dokumen</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <DocumentReferencesPanel
+            documentId={documentId}
+            projectId={doc.projectPhase?.project?.id}
+            canEdit={canTag}
           />
         </CardContent>
       </Card>

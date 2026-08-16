@@ -1,11 +1,13 @@
 import { NextRequest } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
+import { copyFile, mkdir } from "fs/promises";
 import path from "path";
 import {
   getSessionUser, getUserProjectRole,
   unauthorized, forbidden, badRequest, ok, created,
 } from "@/lib/api-helpers";
 import { getUploadsRoot } from "@/lib/storage";
+import { parseMultipartUpload, cleanupTempUpload } from "@/lib/upload-stream";
+import { MAX_UPLOAD_SIZE_BYTES } from "@/types";
 import { listNotulenForProject, createNotulen } from "@/lib/services/notulen.service";
 
 export async function GET(
@@ -51,25 +53,31 @@ export async function POST(
   let filePath: string | null = null;
 
   if (contentType.includes("multipart/form-data")) {
-    const formData = await req.formData();
-    title = formData.get("title") as string ?? "";
-    meetingType = (formData.get("meetingType") as string) || null;
-    meetingDate = formData.get("meetingDate") as string ?? "";
-    location = (formData.get("location") as string) || null;
-    attendees = (formData.get("attendees") as string) || null;
-    discussion = (formData.get("discussion") as string) || null;
-    const rawItems = formData.get("actionItems") as string;
+    // Streams straight to a temp file instead of buffering the whole request
+    // in memory (req.formData() would) — see upload-stream.ts.
+    const parsed = await parseMultipartUpload(req, { maxFileBytes: MAX_UPLOAD_SIZE_BYTES });
+    if ("error" in parsed) return badRequest("Ukuran file maksimal 200MB");
+
+    title = parsed.fields.title ?? "";
+    meetingType = parsed.fields.meetingType || null;
+    meetingDate = parsed.fields.meetingDate ?? "";
+    location = parsed.fields.location || null;
+    attendees = parsed.fields.attendees || null;
+    discussion = parsed.fields.discussion || null;
+    const rawItems = parsed.fields.actionItems;
     actionItems = rawItems ? JSON.parse(rawItems) : [];
 
-    const file = formData.get("file") as File | null;
+    const file = parsed.file;
     if (file && file.size > 0) {
       const uploadsDir = path.join(getUploadsRoot(), projectId);
       await mkdir(uploadsDir, { recursive: true });
-      const safeFilename = `notulen-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_")}`;
+      const safeFilename = `notulen-${Date.now()}-${file.originalName.replace(/[^a-zA-Z0-9.\-_]/g, "_")}`;
       const dest = path.join(uploadsDir, safeFilename);
-      const buffer = Buffer.from(await file.arrayBuffer());
-      await writeFile(dest, buffer);
+      await copyFile(file.tempPath, dest);
+      await cleanupTempUpload(file.tempPath);
       filePath = `/api/files/${projectId}/${safeFilename}`;
+    } else {
+      await cleanupTempUpload(file?.tempPath);
     }
   } else {
     const body = await req.json();

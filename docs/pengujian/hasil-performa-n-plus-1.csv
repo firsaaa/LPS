@@ -1,0 +1,22 @@
+tingkat,kode,nama_endpoint,jumlah_proyek,jumlah_dokumen_total,jumlah_dokumen_proyek_uji,jumlah_query_sql
+kecil,PF-01,"Dashboard lintas proyek",5,100,20,18
+kecil,PF-02,"Detail proyek + ringkasan kelengkapan",5,100,20,15
+kecil,PF-03,"Daftar dokumen proyek",5,100,20,11
+kecil,PF-04,"Pencarian judul dokumen",5,100,20,12
+kecil,PF-05,"Pencarian isi berkas",5,100,20,12
+kecil,PF-06,"Pusat Kepatuhan (laporan agregat)",5,100,20,19
+kecil,PF-07,"Detail dokumen + riwayat versi",5,100,20,16
+sedang,PF-01,"Dashboard lintas proyek",20,2000,100,18
+sedang,PF-02,"Detail proyek + ringkasan kelengkapan",20,2000,100,15
+sedang,PF-03,"Daftar dokumen proyek",20,2000,100,11
+sedang,PF-04,"Pencarian judul dokumen",20,2000,100,12
+sedang,PF-05,"Pencarian isi berkas",20,2000,100,12
+sedang,PF-06,"Pusat Kepatuhan (laporan agregat)",20,2000,100,19
+sedang,PF-07,"Detail dokumen + riwayat versi",20,2000,100,16
+besar,PF-01,"Dashboard lintas proyek",30,4500,150,18
+besar,PF-02,"Detail proyek + ringkasan kelengkapan",30,4500,150,15
+besar,PF-03,"Daftar dokumen proyek",30,4500,150,11
+besar,PF-04,"Pencarian judul dokumen",30,4500,150,12
+besar,PF-05,"Pencarian isi berkas",30,4500,150,12
+besar,PF-06,"Pusat Kepatuhan (laporan agregat)",30,4500,150,19
+besar,PF-07,"Detail dokumen + riwayat versi",30,4500,150,16

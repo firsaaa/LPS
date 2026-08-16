@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { getSessionUser, getUserProjectRole, isAllowedUploadFilename, unauthorized, ok, created, badRequest, forbidden } from "@/lib/api-helpers";
 import { listProjectDocuments, createProjectDocument } from "@/lib/services/document.service";
+import { parseMultipartUpload, cleanupTempUpload } from "@/lib/upload-stream";
 import { MAX_UPLOAD_SIZE_BYTES } from "@/types";
 import type { DocumentType, DocumentVisibility } from "@prisma/client";
 
@@ -24,29 +25,35 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!user) return unauthorized();
   const { id: projectId } = await params;
 
+  // Superadmin is read-only/administrative — document workflow belongs to the
+  // project team, same reasoning as /approve (see that route's comment).
+  if (user.isSuperadmin) return forbidden();
   const role = await getUserProjectRole(user.id, projectId);
-  if (!user.isSuperadmin && role !== "ENGINEER" && role !== "TEAM_LEADER") return forbidden();
+  if (role !== "ENGINEER" && role !== "TEAM_LEADER") return forbidden();
 
-  const formData = await req.formData();
-  const phaseStr = formData.get("phase") as string | null;
-  const documentTypeId = formData.get("documentTypeId") as string | null;
-  const title = formData.get("title") as string | null;
-  const description = formData.get("description") as string | null;
-  const visibility = (formData.get("visibility") as DocumentVisibility) ?? "INTERNAL";
-  const assignedToId = formData.get("assignedToId") as string | null;
-  const file = formData.get("file") as File | null;
+  // Streams the multipart body straight to a temp file instead of buffering
+  // the whole request in memory (req.formData() would) — see upload-stream.ts.
+  const parsed = await parseMultipartUpload(req, {
+    maxFileBytes: MAX_UPLOAD_SIZE_BYTES,
+    isAllowedFilename: isAllowedUploadFilename,
+  });
+  if ("error" in parsed) {
+    return badRequest(parsed.error === "too_large" ? "Ukuran file maksimal 200MB" : "Tipe file tidak didukung");
+  }
+  const { fields, file } = parsed;
+  const phaseStr = fields.phase ?? null;
+  const documentTypeId = fields.documentTypeId ?? null;
+  const title = fields.title ?? null;
+  const description = fields.description ?? null;
+  const visibility = (fields.visibility as DocumentVisibility) ?? "INTERNAL";
+  const assignedToId = fields.assignedToId || null;
 
   if (!phaseStr || !documentTypeId || !title) {
+    await cleanupTempUpload(file?.tempPath);
     return badRequest("phase, documentTypeId, dan title wajib diisi");
   }
 
-  let fileData: { buffer: Buffer; originalName: string } | null = null;
-  if (file) {
-    if (file.size > MAX_UPLOAD_SIZE_BYTES) return badRequest("Ukuran file maksimal 200MB");
-    if (!isAllowedUploadFilename(file.name)) return badRequest("Tipe file tidak didukung");
-    const bytes = await file.arrayBuffer();
-    fileData = { buffer: Buffer.from(bytes), originalName: file.name };
-  }
+  const fileData = file ? { tempPath: file.tempPath, originalName: file.originalName, size: file.size } : null;
 
   const result = await createProjectDocument({
     projectId,

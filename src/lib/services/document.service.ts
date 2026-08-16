@@ -1,11 +1,11 @@
-import { writeFile, mkdir } from "fs/promises";
+import { copyFile, mkdir, readFile, unlink } from "fs/promises";
 import path from "path";
 import { after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUploadsRoot } from "@/lib/storage";
 import { getUserProjectIds, getUserRoleMap } from "@/lib/api-helpers";
 import { generateDocumentCode } from "@/lib/services/document-code.service";
-import { extractText } from "@/lib/services/text-extraction.service";
+import { extractText, MAX_EXTRACT_BYTES } from "@/lib/services/text-extraction.service";
 import { ocrPdf } from "@/lib/services/ocr.service";
 import type { DocumentType, DocumentStatus, DocumentVisibility, LpsPhase, Role } from "@prisma/client";
 
@@ -77,9 +77,15 @@ export function getNextVersionNumber(latestVersionNumber: number | null | undefi
   return (latestVersionNumber ?? 0) + 1;
 }
 
-function scheduleOcr(documentId: string, buffer: Buffer) {
+// Reads the file itself (rather than taking a Buffer from the caller) so the
+// request/response cycle never holds a large-file buffer just in case OCR
+// ends up needing it — the read happens here, after the response is already
+// sent (see next/server's after()), where a one-time memory cost is far less
+// costly than during the concurrent-request-handling window.
+function scheduleOcr(documentId: string, diskPath: string) {
   after(async () => {
     try {
+      const buffer = await readFile(diskPath);
       const text = await ocrPdf(buffer);
       await prisma.document.update({ where: { id: documentId }, data: { contentText: text, contentTextPending: false } });
     } catch (e) {
@@ -96,11 +102,15 @@ function buildStoredFilename(documentCode: string, versionNumber: number, ext: s
   return `${documentCode}-v${versionNumber}.${ext}`;
 }
 
-async function saveUploadedFile(projectId: string, storedName: string, buffer: Buffer) {
+// Copies from the already-on-disk temp file (written by the streaming
+// multipart parser) rather than taking a Buffer — the caller never holds the
+// whole upload in memory at once, which is the point (see upload-stream.ts).
+async function saveUploadedFile(projectId: string, storedName: string, sourcePath: string) {
   const uploadDir = path.join(getUploadsRoot(), projectId);
   await mkdir(uploadDir, { recursive: true });
-  await writeFile(path.join(uploadDir, storedName), buffer);
-  return `/api/files/${projectId}/${storedName}`;
+  const destPath = path.join(uploadDir, storedName);
+  await copyFile(sourcePath, destPath);
+  return { url: `/api/files/${projectId}/${storedName}`, diskPath: destPath };
 }
 
 // The upload UI now lets users pick directly from the 13-type master
@@ -321,7 +331,7 @@ export async function createDocumentVersion(params: {
   documentId: string;
   actorId: string;
   projectId: string;
-  file: { buffer: Buffer; originalName: string };
+  file: { tempPath: string; originalName: string; size: number };
   changeNotes: string | null;
 }) {
   const doc = await prisma.document.findUniqueOrThrow({
@@ -336,10 +346,17 @@ export async function createDocumentVersion(params: {
 
   const ext = params.file.originalName.split(".").pop()?.toLowerCase() ?? "bin";
   const storedName = buildStoredFilename(doc.documentCode, nextVersionNumber, ext);
-  const filePath = await saveUploadedFile(params.projectId, storedName, params.file.buffer);
-  const contentText = await extractText(params.file.buffer, ext);
-  const ocrPending = needsOcr(ext, contentText);
-  if (ocrPending) scheduleOcr(params.documentId, params.file.buffer);
+  const saved = await saveUploadedFile(params.projectId, storedName, params.file.tempPath);
+  const filePath = saved.url;
+  const fileWithinExtractBound = params.file.size <= MAX_EXTRACT_BYTES;
+  const contentText = fileWithinExtractBound
+    ? await extractText(await readFile(params.file.tempPath), ext)
+    : null;
+  // See the same guard in createProjectDocument() — needsOcr() alone can't
+  // tell "skipped, too big" from "attempted, found nothing".
+  const ocrPending = fileWithinExtractBound ? needsOcr(ext, contentText) : false;
+  await cleanupTempUpload(params.file.tempPath);
+  if (ocrPending) scheduleOcr(params.documentId, saved.diskPath);
 
   return prisma.$transaction(async (tx) => {
     await tx.documentVersion.updateMany({
@@ -416,15 +433,21 @@ export async function createProjectDocument(params: {
   description: string | null;
   visibility: DocumentVisibility;
   assignedToId: string | null;
-  file: { buffer: Buffer; originalName: string } | null;
+  file: { tempPath: string; originalName: string; size: number } | null;
 }) {
   let projectPhase = await prisma.projectPhase.findUnique({
     where: { projectId_phase: { projectId: params.projectId, phase: params.phase as any } },
   });
-  if (!projectPhase) return { error: "not_found" as const };
+  if (!projectPhase) {
+    await cleanupTempUpload(params.file?.tempPath);
+    return { error: "not_found" as const };
+  }
 
   if (!projectPhase.isActive) {
-    if (!params.canActivatePhase) return { error: "phase_inactive" as const };
+    if (!params.canActivatePhase) {
+      await cleanupTempUpload(params.file?.tempPath);
+      return { error: "phase_inactive" as const };
+    }
     projectPhase = await prisma.projectPhase.update({
       where: { id: projectPhase.id },
       data: { isActive: true },
@@ -432,11 +455,24 @@ export async function createProjectDocument(params: {
   }
 
   const ext = params.file ? params.file.originalName.split(".").pop()?.toLowerCase() ?? "bin" : null;
-  const contentText = params.file ? await extractText(params.file.buffer, ext!) : null;
-  const ocrPending = params.file ? needsOcr(ext!, contentText) : false;
+  const fileWithinExtractBound = !!params.file && params.file.size <= MAX_EXTRACT_BYTES;
+  // Only read the file into memory for extraction if it's small enough —
+  // large files already skip extraction inside extractText() (MAX_EXTRACT_BYTES),
+  // so there's no point paying for the read at all above that size.
+  const contentText = fileWithinExtractBound
+    ? await extractText(await readFile(params.file!.tempPath), ext!)
+    : null;
+  // needsOcr() can't tell "extraction found nothing" apart from "extraction
+  // was never attempted because the file is huge" — gate on the same size
+  // bound here too, otherwise a 150MB upload would trigger a background job
+  // that reads the whole 150MB file into memory just to run OCR on it.
+  const ocrPending = fileWithinExtractBound ? needsOcr(ext!, contentText) : false;
 
   const typeMaster = await prisma.documentTypeMaster.findUnique({ where: { id: params.documentTypeId } });
-  if (!typeMaster) return { error: "invalid_type" as const };
+  if (!typeMaster) {
+    await cleanupTempUpload(params.file?.tempPath);
+    return { error: "invalid_type" as const };
+  }
   const typeCode = typeMaster.typeCode;
   const legacyType = legacyTypeForCode(typeCode);
   const retentionUntil =
@@ -448,16 +484,20 @@ export async function createProjectDocument(params: {
 
   const MAX_ATTEMPTS = 3;
   let newDocId: string | null = null;
+  let savedDiskPath: string | null = null;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS && !newDocId; attempt++) {
     const documentCode = await generateDocumentCode(params.projectId, params.phase as LpsPhase, typeCode);
 
     // File is named after the code once it's known, so it can only be written per-attempt.
     // A retry (extremely rare — see generateDocumentCode) leaves a harmless orphaned file
-    // under the previous attempt's code.
+    // under the previous attempt's code. Copied from the temp file each attempt — the temp
+    // file itself is only cleaned up once, after the loop (success or exhausted).
     let filePath: string | null = null;
     if (params.file) {
       const storedName = buildStoredFilename(documentCode, 1, ext!);
-      filePath = await saveUploadedFile(params.projectId, storedName, params.file.buffer);
+      const saved = await saveUploadedFile(params.projectId, storedName, params.file.tempPath);
+      filePath = saved.url;
+      savedDiskPath = saved.diskPath;
     }
 
     try {
@@ -514,10 +554,15 @@ export async function createProjectDocument(params: {
     }
   }
 
-  if (ocrPending && params.file) scheduleOcr(newDocId!, params.file.buffer);
+  await cleanupTempUpload(params.file?.tempPath);
+  if (ocrPending && savedDiskPath) scheduleOcr(newDocId!, savedDiskPath);
 
   const full = await prisma.document.findUnique({ where: { id: newDocId! }, include: docInclude });
   return { document: full };
+}
+
+async function cleanupTempUpload(tempPath: string | undefined) {
+  if (tempPath) await unlink(tempPath).catch(() => {});
 }
 
 const searchInclude = {

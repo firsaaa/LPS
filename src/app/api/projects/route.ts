@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getSessionUser, unauthorized, ok, created, badRequest } from "@/lib/api-helpers";
+import { getSessionUser, unauthorized, forbidden, ok, created, badRequest } from "@/lib/api-helpers";
 import { listProjects, createProject } from "@/lib/services/project.service";
 
 export async function GET(req: NextRequest) {
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
   // (see createProject), and Super Admin's job here is assigning/overseeing
   // roles across every project, not leading one itself.
   if (!user.canLeadProject) {
-    return badRequest("Hanya user dengan hak can_lead_project yang dapat membuat proyek");
+    return forbidden();
   }
 
   const body = await req.json();

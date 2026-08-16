@@ -3,7 +3,7 @@ import JSZip from "jszip";
 // Best-effort plain-text extraction for content search (FR full-text search).
 // Legacy binary formats (.doc, .ppt, .xls-BIFF via non-SheetJS-supported variants)
 // are left unsupported — title/tag/code search still covers those documents.
-const MAX_EXTRACT_BYTES = 25 * 1024 * 1024; // skip extraction above this to keep uploads snappy
+export const MAX_EXTRACT_BYTES = 25 * 1024 * 1024; // skip extraction above this to keep uploads snappy
 
 export async function extractText(buffer: Buffer, ext: string): Promise<string | null> {
   if (buffer.byteLength > MAX_EXTRACT_BYTES) return null;

@@ -86,6 +86,16 @@ enum AuditAction {
   PHASE_CHANGE
   REJECT
   ARCHIVE
+  LINK
+  UNLINK
+}
+
+// Penautan dokumen-ke-dokumen lintas fase (mis. Desain LPS BASED_ON Laporan
+// Assessment Risiko) — hanya satu jenis relasi untuk saat ini, ditulis
+// sebagai enum (bukan string bebas) supaya konsisten dan gampang di-agregat
+// untuk metrik traceability.
+enum DocumentRelationType {
+  BASED_ON
 }
 
 enum ActionItemStatus {
@@ -117,6 +127,7 @@ model User {
   createdNotulen      Notulen[]         @relation("CreatedNotulen")
   assignedActionItems ActionItem[]      @relation("AssignedActionItems")
   createdMilestones   Milestone[]
+  createdDocumentReferences DocumentReference[]
 
   @@map("users")
 }
@@ -294,6 +305,10 @@ model Document {
   versions        DocumentVersion[]
   linkedActionItems ActionItem[]       @relation("LinkedActionItems")
   tags            DocumentTag[]
+  // "references" = dokumen lain yang jadi dasar dokumen ini (outgoing).
+  // "referencedBy" = dokumen lain yang menjadikan dokumen ini dasarnya (incoming).
+  references      DocumentReference[]  @relation("DocumentReferencesFrom")
+  referencedBy    DocumentReference[]  @relation("DocumentReferencesTo")
 
   @@index([projectId, documentTypeId])
   // projectPhaseId was an unindexed FK — every per-project document list/search
@@ -305,6 +320,29 @@ model Document {
   @@index([assignedToId, status])
   @@index([contentTsv], type: Gin)
   @@map("documents")
+}
+
+// Penautan lintas fase — "documentId dibuat BASED_ON referencedDocumentId"
+// (mis. Desain LPS based-on Laporan Assessment Risiko). Dua dokumen boleh
+// berasal dari proyek manapun (tidak dipaksa satu proyek) tapi UI/service
+// membatasi ke proyek yang sama karena itu satu-satunya kasus pemakaian yang
+// masuk akal (dasar untuk M-1 Traceability Coverage / M-2 Lifecycle
+// Integration Level — lihat traceability.service.ts).
+model DocumentReference {
+  id                   String               @id @default(cuid())
+  documentId           String               @map("document_id")
+  referencedDocumentId String               @map("referenced_document_id")
+  relationType         DocumentRelationType @default(BASED_ON) @map("relation_type")
+  createdById          String               @map("created_by_id")
+  createdAt            DateTime             @default(now()) @map("created_at")
+
+  document           Document @relation("DocumentReferencesFrom", fields: [documentId], references: [id], onDelete: Cascade)
+  referencedDocument Document @relation("DocumentReferencesTo", fields: [referencedDocumentId], references: [id], onDelete: Cascade)
+  createdBy          User     @relation(fields: [createdById], references: [id])
+
+  @@unique([documentId, referencedDocumentId, relationType])
+  @@index([referencedDocumentId])
+  @@map("document_references")
 }
 
 // Tiap revisi = record baru; tidak ada update/overwrite
