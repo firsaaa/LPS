@@ -28,13 +28,13 @@ const RETENTION_TRIGGER_LABELS: Record<string, string> = {
 // alih-alih daftar 4 pilihan bertingkat.
 function visibilityToFlags(visibility: DocumentVisibility) {
   return {
-    auditor: visibility === "AUDITOR_ACCESSIBLE" || visibility === "ALL_ACCESSIBLE",
+    inspector: visibility === "AUDITOR_ACCESSIBLE" || visibility === "ALL_ACCESSIBLE",
     client: visibility === "CLIENT_ACCESSIBLE" || visibility === "ALL_ACCESSIBLE",
   };
 }
-function flagsToVisibility(auditor: boolean, client: boolean): DocumentVisibility {
-  if (auditor && client) return "ALL_ACCESSIBLE";
-  if (auditor) return "AUDITOR_ACCESSIBLE";
+function flagsToVisibility(inspector: boolean, client: boolean): DocumentVisibility {
+  if (inspector && client) return "ALL_ACCESSIBLE";
+  if (inspector) return "AUDITOR_ACCESSIBLE";
   if (client) return "CLIENT_ACCESSIBLE";
   return "INTERNAL";
 }
@@ -67,8 +67,8 @@ export function DocumentDetailClient({ documentId, userId }: { documentId: strin
     return () => clearInterval(t);
   }, [doc?.contentTextPending, load]);
 
-  async function setVisibilityFlags(auditor: boolean, client: boolean) {
-    const visibility = flagsToVisibility(auditor, client);
+  async function setVisibilityFlags(inspector: boolean, client: boolean) {
+    const visibility = flagsToVisibility(inspector, client);
     const res = await fetch(`/api/documents/${documentId}/visibility`, {
       method: "PUT", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ visibility }),
@@ -183,11 +183,11 @@ export function DocumentDetailClient({ documentId, userId }: { documentId: strin
                   return (
                     <>
                       <label className="flex items-center gap-2 text-sm text-gray-900 cursor-pointer">
-                        <Switch checked={flags.auditor} onCheckedChange={(v) => setVisibilityFlags(v, flags.client)} />
-                        Auditor
+                        <Switch checked={flags.inspector} onCheckedChange={(v) => setVisibilityFlags(v, flags.client)} />
+                        Inspector
                       </label>
                       <label className="flex items-center gap-2 text-sm text-gray-900 cursor-pointer">
-                        <Switch checked={flags.client} onCheckedChange={(v) => setVisibilityFlags(flags.auditor, v)} />
+                        <Switch checked={flags.client} onCheckedChange={(v) => setVisibilityFlags(flags.inspector, v)} />
                         Klien
                       </label>
                     </>

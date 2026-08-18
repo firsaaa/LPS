@@ -12,7 +12,7 @@ import type { DocumentVisibility, DocumentStatus } from "@/types";
 import { formatDate, formatRelative, formatBytes } from "@/lib/utils";
 import { TraceabilityClient } from "@/components/traceability/traceability-client";
 
-export function AuditorClient() {
+export function InspectorClient() {
   const [projects, setProjects] = useState<any[]>([]);
   const [docs, setDocs] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]);

@@ -97,13 +97,13 @@ export const DOCUMENT_STATUS_VARIANT: Record<DocumentStatus, "secondary" | "info
 };
 
 // Dokumen otomatis "Internal" (Team Leader + Engineer) saat diupload; Team
-// Leader lalu bisa menyalakan dua toggle independen (Auditor, Client) untuk
+// Leader lalu bisa menyalakan dua toggle independen (Inspector, Client) untuk
 // menambah akses — bukan memilih dari daftar bertingkat. Label di bawah ini
 // hanya dipakai untuk MENAMPILKAN hasil akhir kombinasi keduanya (mis. di
-// halaman auditor), bukan untuk UI pemilihan itu sendiri.
+// halaman inspector), bukan untuk UI pemilihan itu sendiri.
 export const DOCUMENT_VISIBILITY_LABELS: Record<DocumentVisibility, string> = {
   INTERNAL: "Internal",
-  AUDITOR_ACCESSIBLE: "Internal + Auditor",
+  AUDITOR_ACCESSIBLE: "Internal + Inspector",
   CLIENT_ACCESSIBLE: "Internal + Klien",
   ALL_ACCESSIBLE: "Semua Pihak",
 };

@@ -84,7 +84,7 @@ const navItems: NavItem[] = [
     show: (r) => !r.isSuperadmin && !r.isGlobalInspector && (r.hasClientRole || r.canLeadProject),
   },
   {
-    href: "/auditor",
+    href: "/inspector",
     label: "Pusat Kepatuhan",
     icon: ShieldCheck,
     show: (r) => r.isSuperadmin || r.isGlobalInspector,

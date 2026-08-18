@@ -12,7 +12,7 @@ Proyek LPS melewati 6 fase (Inisiasi → Assessment → Design → Implementasi 
 | Super Admin | Seluruh sistem | Kelola user, tetapkan Team Leader, awasi semua proyek — tidak ikut alur kerja dokumen |
 | Team Leader | Per proyek | Kelola tim & fase, upload/approve/reject dokumen, atur visibilitas, milestone, notulen |
 | Engineer | Per proyek | Upload & submit dokumen ke fase aktif |
-| Inspector (Auditor) | Lintas proyek, global | Meninjau kepatuhan dokumen ke IEC 62305 — murni pengawasan, tidak memutuskan approval |
+| Inspector | Lintas proyek, global | Meninjau kepatuhan dokumen ke IEC 62305 — murni pengawasan, tidak memutuskan approval |
 | Client | Per proyek, eksternal | Portal Client — hanya melihat dokumen yang sudah Disetujui & ditandai untuk klien |
 
 ## Stack
@@ -52,7 +52,7 @@ Buka [http://localhost:3000](http://localhost:3000).
 prisma/schema.prisma        skema DB — sumber kebenaran untuk semua model & relasi
 prisma/seed.ts               data demo untuk development/testing
 src/app/                     routes (App Router) — (auth), (main), api/
-src/components/               UI per fitur (projects, documents, auditor, client-portal, dll)
+src/components/               UI per fitur (projects, documents, inspector, client-portal, dll)
 src/lib/services/             business logic (document, project, milestone, notulen, dashboard, dll)
 src/lib/api-helpers.ts        helper otorisasi & response yang dipakai semua route
 tests/unit/                   unit test

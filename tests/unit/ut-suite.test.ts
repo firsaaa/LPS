@@ -176,7 +176,7 @@ describe("Filter Visibilitas Client — canViewDocument()/visibilityAllowlist() 
     // yang masih DRAFT/UNDER_REVIEW tidak boleh terlihat oleh Client.
     expect(canViewDocument("CLIENT", "CLIENT_ACCESSIBLE", "DRAFT")).toBe(false);
     expect(canViewDocument("CLIENT", "CLIENT_ACCESSIBLE", "UNDER_REVIEW")).toBe(false);
-    // INSPECTOR (Auditor) sengaja TIDAK ikut digate ke APPROVED-only — tugasnya
+    // INSPECTOR sengaja TIDAK ikut digate ke APPROVED-only — tugasnya
     // justru me-review/approve dokumen yang belum APPROVED (lihat UT/FT alur approval).
     expect(canViewDocument("INSPECTOR", "AUDITOR_ACCESSIBLE", "UNDER_REVIEW")).toBe(true);
   });

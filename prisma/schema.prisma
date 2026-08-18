@@ -53,14 +53,14 @@ enum DocumentStatus {
 
 // Dokumen otomatis INTERNAL (Team Leader + Engineer) begitu diupload — bukan
 // pilihan yang harus dibuat saat upload. Team Leader lalu bisa MENAMBAH akses
-// lewat dua toggle independen (lihat DocumentDetailClient): Auditor dan/atau
+// lewat dua toggle independen (lihat DocumentDetailClient): Inspector dan/atau
 // Client. Keempat kombinasi hasil dari dua toggle itu = keempat nilai di bawah
 // (lihat VISIBILITY_VIEWERS di document.service.ts untuk siapa melihat apa).
 enum DocumentVisibility {
   INTERNAL           // Team Leader + Engineer (baseline)
-  AUDITOR_ACCESSIBLE // + Auditor
+  AUDITOR_ACCESSIBLE // + Inspector
   CLIENT_ACCESSIBLE  // + Client
-  ALL_ACCESSIBLE     // + Auditor + Client
+  ALL_ACCESSIBLE     // + Inspector + Client
 }
 
 // Tipe dokumen berstruktur + catch-all FILE_UPLOAD

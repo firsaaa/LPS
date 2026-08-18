@@ -12,7 +12,7 @@ import type { DocumentType, DocumentStatus, DocumentVisibility, LpsPhase, Role }
 // Setiap nilai DocumentVisibility = daftar tetap peran yang boleh melihatnya
 // (lihat komentar enum di schema.prisma). TEAM_LEADER/ENGINEER selalu ada di
 // keempatnya karena INTERNAL adalah baseline yang tidak pernah dicabut — dua
-// toggle (Auditor, Client) di UI cuma MENAMBAH INSPECTOR dan/atau CLIENT ke
+// toggle (Inspector, Client) di UI cuma MENAMBAH INSPECTOR dan/atau CLIENT ke
 // baseline itu. SUPERADMIN sengaja tidak dimasukkan — dia melihat semua,
 // digating terpisah oleh setiap caller (pola `!user.isSuperadmin && …`).
 const VISIBILITY_VIEWERS: Record<DocumentVisibility, Role[]> = {

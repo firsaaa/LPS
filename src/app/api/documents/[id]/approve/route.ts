@@ -77,7 +77,7 @@ export async function POST(
     return forbidden();
   }
   // Approval sits with the project's own Team Leader — Inspector's role is
-  // cross-project compliance oversight (see /auditor), not sitting in a
+  // cross-project compliance oversight (see /inspector), not sitting in a
   // single project's sign-off chain.
   if ((action === "approve" || action === "revise" || action === "reject") &&
     role !== "TEAM_LEADER") {

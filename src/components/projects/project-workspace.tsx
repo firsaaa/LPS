@@ -63,7 +63,7 @@ export function ProjectWorkspace({
   const isClient = myRole === "CLIENT";
   const canUpload = !isReadOnly && (isEngineer || isLeader);
   // Approval sits with the project's own Team Leader — Inspector's job is
-  // cross-project compliance oversight (see /auditor), not sign-off on any
+  // cross-project compliance oversight (see /inspector), not sign-off on any
   // one project's documents.
   const canReview = !isReadOnly && isLeader;
 
@@ -247,7 +247,6 @@ export function ProjectWorkspace({
         <TabsList className="w-full justify-start flex-wrap">
           <TabsTrigger value="phases"><FileText className="mr-1.5 h-3.5 w-3.5" />Fase & Dokumen</TabsTrigger>
           <TabsTrigger value="notulen"><ClipboardList className="mr-1.5 h-3.5 w-3.5" />Notulen Rapat</TabsTrigger>
-          <TabsTrigger value="milestones"><Calendar className="mr-1.5 h-3.5 w-3.5" />Milestone</TabsTrigger>
           <TabsTrigger value="info"><Info className="mr-1.5 h-3.5 w-3.5" />Info Proyek</TabsTrigger>
           <TabsTrigger value="team"><Users className="mr-1.5 h-3.5 w-3.5" />Tim ({project.userRoles?.length ?? 0})</TabsTrigger>
           <TabsTrigger value="activity"><Activity className="mr-1.5 h-3.5 w-3.5" />Riwayat</TabsTrigger>
@@ -297,10 +296,8 @@ export function ProjectWorkspace({
           />
         </TabsContent>
 
-        {/* MILESTONES TAB */}
-        <TabsContent value="milestones" className="mt-4">
-          <MilestonesTab projectId={projectId} isLeader={isLeader || isSuperadmin} />
-        </TabsContent>
+        {/* MILESTONES TAB — hidden from UI for now (feature dropped from
+            scope), component/API/service left intact in case it comes back. */}
 
         {/* INFO TAB */}
         <TabsContent value="info" className="mt-4 space-y-4">
