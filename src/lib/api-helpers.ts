@@ -172,10 +172,16 @@ function serialize(data: unknown) {
   return JSON.stringify(data, (_, v) => (typeof v === "bigint" ? Number(v) : v));
 }
 
+// no-store on every API response — this app has no cacheable/public data (every
+// route is session-scoped), and without it a document's detail page could keep
+// showing a just-superseded version (or any other just-changed state) until a
+// hard refresh, since the browser has no reason to know a plain GET went stale.
+const NO_STORE = { "Content-Type": "application/json", "Cache-Control": "no-store" };
+
 export function ok(data: unknown) {
-  return new NextResponse(serialize(data), { headers: { "Content-Type": "application/json" } });
+  return new NextResponse(serialize(data), { headers: NO_STORE });
 }
 
 export function created(data: unknown) {
-  return new NextResponse(serialize(data), { status: 201, headers: { "Content-Type": "application/json" } });
+  return new NextResponse(serialize(data), { status: 201, headers: NO_STORE });
 }

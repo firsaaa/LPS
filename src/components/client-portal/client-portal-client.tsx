@@ -34,16 +34,21 @@ export function ClientPortalClient({ userId }: { userId: string }) {
   useEffect(() => {
     if (!selectedProjectId) return;
     setLoading(true);
-    fetch(`/api/projects/${selectedProjectId}`)
+    // previewAs=client — this page's whole point is showing what the Client
+    // sees, not what the actual logged-in viewer (often Team Leader,
+    // previewing) sees. Without this, a Team Leader gets their own
+    // unrestricted view here, which used to make the "Client" visibility
+    // toggle look like it did nothing when previewed from this page.
+    fetch(`/api/projects/${selectedProjectId}?previewAs=client`)
       .then((r) => r.ok ? r.json() : null)
       .then(setProjectDetail)
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [selectedProjectId]);
 
-  // The API already filters documents server-side to what this viewer's role
-  // is allowed to see (visibilityAllowlist in getProjectById) — no client-visible
-  // check needed here, everything the payload contains is already permitted.
+  // The API already filters documents server-side to the CLIENT visibility
+  // tier (see previewAs=client above) — no client-visible check needed here,
+  // everything the payload contains is already permitted for a Client to see.
   const allDocs: Array<{ doc: any; phase: string; phaseLabel: string }> = [];
   for (const phase of projectDetail?.phases ?? []) {
     const phaseMeta = LPS_PHASES.find((p) => p.phase === phase.phase);

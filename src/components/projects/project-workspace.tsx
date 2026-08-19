@@ -143,6 +143,20 @@ export function ProjectWorkspace({
     toast({ title: "Anggota dihapus dari proyek", variant: "success" });
   }
 
+  async function deleteThisProject() {
+    const confirmed = window.confirm(
+      `Hapus proyek "${project?.name}" secara permanen? Tindakan ini tidak dapat dibatalkan. Akan ditolak otomatis kalau proyek ini sudah punya dokumen berstatus selain Draft.`
+    );
+    if (!confirmed) return;
+    const res = await fetch(`/api/projects/${projectId}`, { method: "DELETE" });
+    if (res.ok) {
+      toast({ title: "Proyek dihapus", variant: "success" });
+      router.push("/projects");
+    } else {
+      toast({ title: "Gagal menghapus proyek", description: await parseErrorMessage(res), variant: "destructive" });
+    }
+  }
+
   async function doDocAction(docId: string, action: string, notes?: string) {
     const res = await fetch(`/api/documents/${docId}/approve`, {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -315,6 +329,26 @@ export function ProjectWorkspace({
           </Card>
 
           <DocumentStatusRollup phases={project.phases} />
+
+          {isLeader && (
+            <Card className="border-red-100">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm text-red-700">Hapus Proyek</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0 space-y-3">
+                <p className="text-xs text-gray-500">
+                  Hanya bisa dihapus kalau proyek ini belum punya dokumen berstatus selain Draft (dan tidak ada yang ditandai wajib-simpan). Kalau sudah ada riwayat, arsipkan proyeknya lewat menu Status di atas alih-alih menghapus.
+                </p>
+                <Button
+                  variant="outline" size="sm"
+                  className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                  onClick={deleteThisProject}
+                >
+                  Hapus Proyek
+                </Button>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* TEAM TAB */}

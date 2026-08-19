@@ -266,14 +266,19 @@ export function LaporanClient({ userId }: { userId: string }) {
           </div>
 
           {/* Kontribusi uploader */}
-          {uploaderBreakdown.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-sm font-semibold text-gray-700">
-                Kontribusi Anggota Tim ({PERIOD_LABELS[period]})
-              </p>
-              <Card>
-                <CardContent className="p-4 space-y-3">
-                  {uploaderBreakdown.map((u) => {
+          <div className="space-y-2">
+            <p className="text-sm font-semibold text-gray-700">
+              Kontribusi Anggota Tim ({PERIOD_LABELS[period]})
+            </p>
+            <Card>
+              <CardContent className="p-4 space-y-3">
+                {uploaderBreakdown.length === 0 && (
+                  <p className="text-sm text-gray-400 text-center py-4">
+                    Belum ada dokumen diunggah pada periode &quot;{PERIOD_LABELS[period].toLowerCase()}&quot; ini — coba pilih periode yang lebih panjang di atas.
+                  </p>
+                )}
+                {uploaderBreakdown.length > 0 &&
+                  uploaderBreakdown.map((u) => {
                     const max = uploaderBreakdown[0].count;
                     return (
                       <div key={u.name} className="flex items-center gap-3">
@@ -295,10 +300,9 @@ export function LaporanClient({ userId }: { userId: string }) {
                       </div>
                     );
                   })}
-                </CardContent>
-              </Card>
-            </div>
-          )}
+              </CardContent>
+            </Card>
+          </div>
 
           {/* Recent activity */}
           {recentActivity.length > 0 && (
