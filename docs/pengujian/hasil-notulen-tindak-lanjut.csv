@@ -1,0 +1,5 @@
+kode,skenario,ekspektasi,hasil_aktual,kesimpulan,catatan
+"FN-01","TL buat notulen + tindak lanjut minta jenis dokumen X, ditugaskan ke Engineer","Muncul sebagai tugas terbuka di /api/me/tasks milik penanggung jawab","notulen HTTP 201, actionItemId ada, muncul di /api/me/tasks Engineer: true","Lolos",""
+"FN-02","Engineer unggah dokumen jenis X, tutup tindak lanjut dengan dokumen itu sebagai bukti","Tindak lanjut tertutup, dokumen bukti tertaut","HTTP 200, status=CLOSED, linkedDocument=cmsxepzsa0003f9rj6e2f5poa","Lolos",""
+"RI-28","Engineer proyek lain coba buat notulen di proyek yang bukan miliknya","HTTP 403","HTTP 403","Lolos",""
+"FN-04","Tutup tindak lanjut tanpa dokumen bukti","Ditolak","HTTP 200, status tersimpan=CLOSED","Gagal","TEMUAN: toggleActionItem() di notulen.service.ts tidak memvalidasi keberadaan linkedDocumentId sama sekali sebelum menutup — item berhasil ditutup tanpa bukti apa pun. Bukan bug skrip pengujian; ini perilaku nyata sistem, dikonfirmasi lewat pembacaan kode (baris 188-224) sebelum diuji."

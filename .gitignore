@@ -54,3 +54,6 @@ CLAUDE.md
 # accident. Not real project content.
 /var/
 
+# Microsoft Office lock files (created while a doc/xlsx is open)
+~$*
+
