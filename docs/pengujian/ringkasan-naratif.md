@@ -2,11 +2,13 @@
 
 Pengujian dijalankan dalam empat lapisan: **API** (siapa boleh mengakses/melakukan apa), **Basis Data** (apakah data tersimpan dan terhubung dengan benar), **Performa** (kecepatan, ketahanan beban, kompatibilitas peramban), dan **UI/UX** (temuan dari pemakaian nyata sistem, di luar rencana pengujian awal). Seluruhnya dijalankan di lingkungan basis data terpisah — kecuali populasi data traceability dan verifikasi 5 perbaikan bug, yang memang sengaja dijalankan (dan diverifikasi) langsung di production sebagai bukti nyata untuk skripsi.
 
-**Hasil akhir: 67 dari 69 titik pengujian lolos penuh.**
+**Hasil akhir: 69 dari 71 titik pengujian lolos penuh.**
 
 ## Perkembangan sesi ini
 
 Selain 53 titik pengujian awal (yang sudah mencapai 53/53 lolos setelah serangkaian perbaikan), sesi lanjutan ini menambahkan:
+
+0. **FR-04 dan FR-08 — sebelumnya belum pernah diuji sama sekali.** Ditemukan lewat pengecekan cakupan FR: data seed hanya punya Budi selalu TEAM_LEADER dan Rina selalu ENGINEER di setiap proyek, jadi belum ada bukti langsung bahwa resolusi peran benar-benar per-proyek (FR-04); dan pembuatan proyek baru belum pernah diuji end-to-end untuk memastikan 6 fase tetap benar-benar muncul otomatis (FR-08). Kedua titik diuji lewat API sungguhan terhadap `lps_edms_test`, keduanya **Lolos**: Rina yang ditambahkan sebagai TEAM_LEADER di satu proyek (Mall Central) langsung bisa mengedit proyek itu DALAM SESI LOGIN YANG SAMA, tapi tetap ditolak mengedit proyek lain (Tower A) tempat dia cuma ENGINEER — membuktikan peran diresolusi per-proyek, bukan flag global. Proyek baru yang dibuat lewat API otomatis mendapat persis 6 fase sesuai urutan siklus IEC 62305, semua belum aktif. Data uji tambahan (peran ekstra, proyek uji) sudah dibersihkan lagi setelah pengujian.
 
 1. **FR-10 (notulen & tindak lanjut) — sebelumnya belum pernah diuji sama sekali.** 4 titik (FN-01, FN-02, RI-28, FN-04) menutup kekosongan ini. 3 lolos; **FN-04 menemukan bug nyata**: sistem tidak memeriksa sama sekali apakah tindak lanjut punya dokumen bukti sebelum diizinkan ditutup — siapa pun bisa "menyelesaikan" tindak lanjut tanpa benar-benar melampirkan bukti.
 2. **Pengarsipan dokumen satuan (DB-D4) — sebelumnya belum pernah dibuktikan** karena data uji tidak punya contoh dokumen berstatus arsip. Setelah diuji: dokumen tetap terbaca dan tidak bisa dihapus permanen lagi (sesuai ekspektasi), TAPI ternyata **tidak hilang dari daftar dokumen proyek** — baik di data mentah maupun tampilan web, sistem memilih tetap menampilkannya dengan label "Diarsipkan" alih-alih menyembunyikannya. Ini mungkin memang desain yang benar (transparansi), perlu dikonfirmasi ke pembimbing.

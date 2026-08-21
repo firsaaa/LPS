@@ -1,0 +1,2 @@
+kode,skenario,hasil,kesimpulan
+"FR-08","Proyek baru otomatis mendapat 6 fase tetap (INISIASI..INSPEKSI_BERKALA), semua belum aktif","Proyek baru ""Uji FR-08 1787276036318"" otomatis mendapat 6 fase persis sesuai urutan siklus IEC 62305 (INISIASI → ASSESSMENT → DESIGN → IMPLEMENTASI → COMMISSIONING → INSPEKSI_BERKALA), semuanya belum aktif (isActive=false) sampai Team Leader mengaktifkannya manual.","Lolos"

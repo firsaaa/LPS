@@ -1,0 +1,2 @@
+kode,skenario,hasil,kesimpulan
+"FR-04","Satu pengguna (Rina) punya peran berbeda di dua proyek berbeda secara bersamaan (ENGINEER di Tower A, TEAM_LEADER di Mall Central)","Sebelum: Rina bukan anggota Mall Central (GET→403). Setelah ditambahkan sebagai TEAM_LEADER di Mall Central (oleh Superadmin): dalam SESI LOGIN YANG SAMA, Rina bisa GET (200) dan PATCH (200) Mall Central sebagai Team Leader, TAPI PATCH ke Tower A tetap ditolak (403) karena di sana perannya masih ENGINEER. Membuktikan resolusi peran benar-benar per-proyek, bukan flag global per-user.","Lolos"
