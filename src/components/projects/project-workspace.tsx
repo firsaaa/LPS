@@ -112,6 +112,19 @@ export function ProjectWorkspace({
     if (res.ok) { load(); toast({ title: "Status proyek diperbarui", variant: "success" }); }
   }
 
+  async function updateVisibilityDefault(field: "inspectorSeesAllDocuments" | "clientSeesAllDocuments", value: boolean) {
+    const res = await fetch(`/api/projects/${projectId}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ [field]: value }),
+    });
+    if (res.ok) {
+      load();
+      toast({ title: "Pengaturan visibilitas diperbarui", variant: "success" });
+    } else {
+      toast({ title: "Gagal memperbarui pengaturan visibilitas", description: await parseErrorMessage(res), variant: "destructive" });
+    }
+  }
+
   async function togglePhase(phase: string, isActive: boolean) {
     const res = await fetch(`/api/projects/${projectId}/phases`, {
       method: "PATCH", headers: { "Content-Type": "application/json" },
@@ -329,6 +342,39 @@ export function ProjectWorkspace({
           </Card>
 
           <DocumentStatusRollup phases={project.phases} />
+
+          {isLeader && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm">Visibilitas Dokumen</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0 space-y-4">
+                <p className="text-xs text-gray-500">
+                  Saklar di bawah berlaku untuk SEMUA dokumen di proyek ini sekaligus. Matikan kalau mau atur akses per dokumen satu per satu (lewat tombol visibilitas di halaman masing-masing dokumen).
+                </p>
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-medium">Perlihatkan semua dokumen ke Inspector</p>
+                    <p className="text-xs text-gray-500">Default: menyala. Inspector langsung bisa lihat seluruh dokumen proyek ini tanpa diatur satu-satu.</p>
+                  </div>
+                  <Switch
+                    checked={project.inspectorSeesAllDocuments}
+                    onCheckedChange={(v: boolean) => updateVisibilityDefault("inspectorSeesAllDocuments", v)}
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-medium">Perlihatkan semua dokumen ke Client</p>
+                    <p className="text-xs text-gray-500">Default: mati. Kalau mati, Client tidak lihat dokumen apa pun sampai diberi akses satu-satu.</p>
+                  </div>
+                  <Switch
+                    checked={project.clientSeesAllDocuments}
+                    onCheckedChange={(v: boolean) => updateVisibilityDefault("clientSeesAllDocuments", v)}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {isLeader && (
             <Card className="border-red-100">
@@ -1432,6 +1478,8 @@ function NotulenTab({ projectId, canCreate, teamMembers, projectDocuments }: any
       load();
       toast({ title: "Action item ditandai selesai", variant: "success" });
       setCloseTarget(null);
+    } else {
+      toast({ title: "Gagal menutup action item", description: await parseErrorMessage(res), variant: "destructive" });
     }
   }
 

@@ -57,3 +57,6 @@ CLAUDE.md
 # Microsoft Office lock files (created while a doc/xlsx is open)
 ~$*
 
+# Local upload storage used by the isolated test server (.env.test UPLOAD_DIR)
+/uploads-test/
+

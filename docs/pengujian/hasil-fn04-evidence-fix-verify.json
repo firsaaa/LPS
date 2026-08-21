@@ -1,0 +1,40 @@
+{
+  "dijalankan": "2026-08-21T12:36:35.168Z",
+  "total": 3,
+  "pass": 3,
+  "fail": 0,
+  "hasil": [
+    {
+      "kode": "FN-04b",
+      "jenis": "Negative",
+      "deskripsi": "Tutup tindak lanjut yang MENSYARATKAN bukti (requiredDocumentTypeId diisi), tanpa melampirkan dokumen apa pun",
+      "expected": "Ditolak (HTTP 4xx) — PERBAIKAN dari FN-04 asli",
+      "actual": "HTTP 400 (Tindak lanjut ini mensyaratkan dokumen bukti — lampirkan dokumen dulu sebelum menutup)",
+      "status": "PASS"
+    },
+    {
+      "kode": "FN-04c",
+      "jenis": "Positive",
+      "deskripsi": "Kontrol pembanding: tutup tindak lanjut yang mensyaratkan bukti, DENGAN dokumen jenis yang benar-benar cocok",
+      "expected": "Berhasil (HTTP 200, status=CLOSED) — memastikan perbaikan FN-04b tidak jadi terlalu ketat/salah blokir",
+      "actual": "HTTP 200, status=CLOSED",
+      "status": "PASS"
+    },
+    {
+      "kode": "FN-04d",
+      "jenis": "Positive",
+      "deskripsi": "Kontrol pembanding: action item BEBAS-BENTUK (tidak pernah mensyaratkan bukti) tetap bisa ditutup tanpa dokumen — perbaikan tidak overreach",
+      "expected": "Berhasil (HTTP 200, status=CLOSED)",
+      "actual": "HTTP 200, status=CLOSED",
+      "status": "PASS"
+    }
+  ],
+  "temuan": [
+    {
+      "catatan": "Kenapa script ini terpisah dari notulen-tindak-lanjut.mjs (FN-04 asli)",
+      "file": "scripts/testing/notulen-tindak-lanjut.mjs (TIDAK DIUBAH, sesuai aturan)",
+      "baris": "FN-04 block — action item dibuat tanpa documentTypeId",
+      "isi": "FN-04 asli membuat action item TANPA requiredDocumentTypeId, jadi tidak pernah mensyaratkan bukti — perbaikan toggleActionItem() (notulen.service.ts) HANYA menolak penutupan-tanpa-bukti kalau requiredDocumentTypeId di-set. Menjalankan ulang FN-04 asli tanpa modifikasi akan TETAP menunjukkan 'Gagal' (perilaku itu sendiri benar: action item bebas-bentuk memang boleh ditutup tanpa bukti). FN-04b/c/d di atas menguji skenario yang benar-benar relevan dengan perbaikan."
+    }
+  ]
+}

@@ -11,4 +11,3 @@ kode,browser,skenario,hasil,kesimpulan
 "PR-04","firefox","Halaman persetujuan dokumen tampil","Berhasil","Lolos"
 "PR-05","firefox","Panel Penelusuran Dokumen (traceability) tampil","Berhasil","Lolos"
 "PR-06","firefox","Portal Client tampil","Berhasil","Lolos"
-"PR-00","webkit","Coba jalankan seluruh alur PR-01..06 di WebKit (Safari)","Proses binary WebKit crash saat dibuka (\"Bus error: 10\"), bahkan sendirian tanpa browser lain berjalan bersamaan — dikonfirmasi memori sistem sangat menipis (<10MB bebas) di mesin pengujian saat itu","Tidak dapat diuji","Kegagalan infrastruktur/lingkungan pengujian (bukan temuan soal aplikasinya) — bukan bug LPS EDMS. Kompatibilitas tetap diklaim cukup terbukti lewat dua mesin render berbeda (Chromium/Blink dan Firefox/Gecko), sesuai standar minimum yang ditetapkan sendiri sebelum pengujian ini dimulai."

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { readFile } from "fs/promises";
 import path from "path";
 import { getSessionUser, getUserProjectRole } from "@/lib/api-helpers";
-import { canViewDocument } from "@/lib/services/document.service";
+import { canViewDocument, resolveVisibilityBypass } from "@/lib/services/document.service";
 import { getUploadsRoot } from "@/lib/storage";
 import { prisma } from "@/lib/prisma";
 
@@ -46,16 +46,19 @@ const MIME_TYPES: Record<string, string> = {
 async function resolveFileAccess(requestPath: string, projectIdFromPath: string) {
   const doc = await prisma.document.findFirst({
     where: { OR: [{ filePath: requestPath }, { versions: { some: { filePath: requestPath } } }] },
-    select: { visibility: true, status: true, projectPhase: { select: { projectId: true } } },
+    select: {
+      visibility: true, status: true,
+      projectPhase: { select: { projectId: true, project: { select: { inspectorSeesAllDocuments: true, clientSeesAllDocuments: true } } } },
+    },
   });
-  if (doc) return { kind: "document" as const, projectId: doc.projectPhase.projectId, visibility: doc.visibility, status: doc.status };
+  if (doc) return { kind: "document" as const, projectId: doc.projectPhase.projectId, visibility: doc.visibility, status: doc.status, project: doc.projectPhase.project };
 
   const notulen = await prisma.notulen.findFirst({ where: { filePath: requestPath }, select: { projectId: true } });
-  if (notulen) return { kind: "notulen" as const, projectId: notulen.projectId, visibility: null, status: null };
+  if (notulen) return { kind: "notulen" as const, projectId: notulen.projectId, visibility: null, status: null, project: null };
 
   // Orphaned/unrecognized path — fall back to plain project membership, scoped
   // to the projectId segment the URL itself is namespaced under.
-  return { kind: "unknown" as const, projectId: projectIdFromPath, visibility: null, status: null };
+  return { kind: "unknown" as const, projectId: projectIdFromPath, visibility: null, status: null, project: null };
 }
 
 export async function GET(
@@ -82,7 +85,7 @@ export async function GET(
     const role = await getUserProjectRole(user.id, access.projectId);
 
     const allowed = access.kind === "document"
-      ? canViewDocument(role, access.visibility!, access.status!)
+      ? canViewDocument(role, access.visibility!, access.status!, resolveVisibilityBypass(role, access.project))
       : !!role || user.isGlobalInspector; // notulen / unrecognized path: any project role is enough, same as the notulen list endpoint
 
     if (!allowed) {

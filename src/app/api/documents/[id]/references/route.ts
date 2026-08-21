@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { getSessionUser, getUserProjectRole, unauthorized, ok, created, badRequest, forbidden, notFound } from "@/lib/api-helpers";
-import { getDocumentWithProject, canViewDocument, getDocumentDetail } from "@/lib/services/document.service";
+import { getDocumentWithProject, canViewDocument, getDocumentDetail, resolveVisibilityBypass } from "@/lib/services/document.service";
 import { listDocumentReferences, addDocumentReference } from "@/lib/services/document-reference.service";
 
 /** GET /api/documents/[id]/references — dokumen yang jadi dasar ini, dan dokumen yang menjadikan ini dasarnya. */
@@ -16,7 +16,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     const role = await getUserProjectRole(user.id, doc.projectPhase.projectId);
     if (!role) return forbidden();
     const full = await getDocumentDetail(documentId);
-    if (!full || !canViewDocument(role, full.visibility, full.status)) return forbidden();
+    if (!full || !canViewDocument(role, full.visibility, full.status, resolveVisibilityBypass(role, full.projectPhase.project))) return forbidden();
   }
 
   const result = await listDocumentReferences(documentId);

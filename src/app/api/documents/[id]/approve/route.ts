@@ -9,38 +9,7 @@ import {
   ok,
 } from "@/lib/api-helpers";
 import { getDocumentWithProject, updateDocumentStatus } from "@/lib/services/document.service";
-import type { DocumentStatus } from "@prisma/client";
-
-// Alur: DRAFT -> UNDER_REVIEW -> APPROVED -> ARCHIVED. "submit" memindahkan
-// DRAFT langsung ke UNDER_REVIEW (tidak ada status SUBMITTED terpisah lagi).
-// REVISION_REQUESTED dan REJECTED sama-sama kembali lewat "submit" setelah
-// diperbaiki — bedanya di makna: revisi = arahnya sudah benar tinggal
-// diperbaiki, ditolak = perlu ditinjau ulang dari awal.
-const VALID_TRANSITIONS: Record<DocumentStatus, DocumentStatus[]> = {
-  DRAFT: ["UNDER_REVIEW"],
-  UNDER_REVIEW: ["APPROVED", "REVISION_REQUESTED", "REJECTED"],
-  APPROVED: ["ARCHIVED"],
-  REVISION_REQUESTED: ["UNDER_REVIEW"],
-  REJECTED: ["UNDER_REVIEW"],
-  ARCHIVED: [],
-};
-
-const ACTION_MAP: Record<string, DocumentStatus> = {
-  submit: "UNDER_REVIEW",
-  approve: "APPROVED",
-  revise: "REVISION_REQUESTED",
-  reject: "REJECTED",
-  archive: "ARCHIVED",
-};
-
-const STATUS_LABEL_ID: Record<DocumentStatus, string> = {
-  DRAFT: "Draft",
-  UNDER_REVIEW: "Sedang Direview",
-  APPROVED: "Disetujui",
-  REVISION_REQUESTED: "Perlu Revisi",
-  REJECTED: "Ditolak",
-  ARCHIVED: "Diarsipkan",
-};
+import { ACTION_MAP, STATUS_LABEL_ID, isValidTransition } from "@/lib/document-status";
 
 /** POST /api/documents/[id]/approve — advance document status */
 export async function POST(
@@ -65,8 +34,7 @@ export async function POST(
   const targetStatus = ACTION_MAP[action];
   if (!targetStatus) return badRequest("action tidak valid (submit|approve|revise|reject|archive)");
 
-  const allowed = VALID_TRANSITIONS[doc.status];
-  if (!allowed.includes(targetStatus)) {
+  if (!isValidTransition(doc.status, targetStatus)) {
     return badRequest(
       `Dokumen berstatus "${STATUS_LABEL_ID[doc.status]}" tidak bisa diubah ke "${STATUS_LABEL_ID[targetStatus]}"`
     );

@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
 
   if (!name || !email || !password) return badRequest("name, email, password wajib diisi");
 
-  const result = await createUser({ name, email, password, globalRole, canLeadProject });
+  const result = await createUser({ name, email, password, globalRole, canLeadProject, actorId: user.id });
   if ("error" in result) return badRequest(result.error);
 
   return created(result.user);

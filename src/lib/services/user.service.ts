@@ -42,6 +42,7 @@ export async function createUser(data: {
   password: string;
   globalRole?: GlobalRole | null;
   canLeadProject?: boolean;
+  actorId: string;
 }): Promise<{ error: string } | { user: NonNullable<Awaited<ReturnType<typeof getUserById>>> }> {
   const existing = await prisma.user.findUnique({ where: { email: data.email } });
   if (existing) return { error: "Email sudah terdaftar" };
@@ -59,6 +60,18 @@ export async function createUser(data: {
 
   await setGlobalRole(newUser.id, data.globalRole ?? null);
 
+  // Temuan FN-18: pembuatan user sebelumnya tidak tercatat di audit_log sama
+  // sekali, berbeda dari hampir semua aksi bermakna lain di sistem (FR-36).
+  await prisma.auditLog.create({
+    data: {
+      actorId: data.actorId,
+      action: "CREATE",
+      entity: "user",
+      entityId: newUser.id,
+      detail: { name: data.name, email: data.email, globalRole: data.globalRole ?? null },
+    },
+  });
+
   const full = await getUserById(newUser.id);
   return { user: full! };
 }
@@ -73,6 +86,7 @@ export async function updateUser(id: string, data: {
   isActive?: boolean;
   globalRole?: GlobalRole | null;
   canLeadProject?: boolean;
+  actorId: string;
 }) {
   const found = await prisma.user.findUnique({ where: { id } });
   if (!found) return { error: "not_found" as const };
@@ -87,6 +101,16 @@ export async function updateUser(id: string, data: {
   });
 
   await setGlobalRole(id, data.globalRole);
+
+  await prisma.auditLog.create({
+    data: {
+      actorId: data.actorId,
+      action: "EDIT",
+      entity: "user",
+      entityId: id,
+      detail: { name: data.name, isActive: data.isActive, canLeadProject: data.canLeadProject },
+    },
+  });
 
   return { success: true as const };
 }

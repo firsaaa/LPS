@@ -32,15 +32,31 @@ export function requiresApprovedOnly(viewerRole: Role | null): boolean {
   return viewerRole === "CLIENT";
 }
 
-export function canViewDocument(viewerRole: Role | null, visibility: DocumentVisibility, status: DocumentStatus): boolean {
+/**
+ * Saklar bulk per proyek (Project.inspectorSeesAllDocuments / clientSeesAllDocuments)
+ * — kalau true untuk peran ini, lewati pemeriksaan tingkat visibilitas per-dokumen
+ * sama sekali (Team Leader tidak perlu buka dokumen satu-satu). TIDAK melewati
+ * gate APPROVED-only untuk Client (requiresApprovedOnly) — itu aturan kematangan
+ * dokumen yang terpisah dari konfigurasi visibilitas.
+ */
+export function resolveVisibilityBypass(viewerRole: Role | null, project: { inspectorSeesAllDocuments: boolean; clientSeesAllDocuments: boolean } | null): boolean {
+  if (!viewerRole || !project) return false;
+  if (viewerRole === "INSPECTOR") return project.inspectorSeesAllDocuments;
+  if (viewerRole === "CLIENT") return project.clientSeesAllDocuments;
+  return false;
+}
+
+export function canViewDocument(viewerRole: Role | null, visibility: DocumentVisibility, status: DocumentStatus, bypassVisibilityTier = false): boolean {
   if (!viewerRole) return false;
-  if (!VISIBILITY_VIEWERS[visibility].includes(viewerRole)) return false;
+  if (!bypassVisibilityTier && !VISIBILITY_VIEWERS[visibility].includes(viewerRole)) return false;
   if (requiresApprovedOnly(viewerRole) && status !== "APPROVED") return false;
   return true;
 }
 
 /** Daftar nilai DocumentVisibility yang boleh dilihat viewer — untuk filter Prisma `visibility: { in: … }` (belum termasuk gate status APPROVED-only, lihat requiresApprovedOnly/canViewDocument). */
-export function visibilityAllowlist(viewerRole: Role | null): DocumentVisibility[] {
+export function visibilityAllowlist(viewerRole: Role | null, bypassVisibilityTier = false): DocumentVisibility[] {
+  const ALL: DocumentVisibility[] = ["INTERNAL", "AUDITOR_ACCESSIBLE", "CLIENT_ACCESSIBLE", "ALL_ACCESSIBLE"];
+  if (bypassVisibilityTier) return ALL;
   return (Object.keys(VISIBILITY_VIEWERS) as DocumentVisibility[]).filter((v) =>
     viewerRole ? VISIBILITY_VIEWERS[v].includes(viewerRole) : false
   );
@@ -220,7 +236,7 @@ export async function searchDocuments(
 export function getDocumentWithProject(documentId: string) {
   return prisma.document.findUnique({
     where: { id: documentId },
-    include: { projectPhase: { select: { projectId: true } } },
+    include: { projectPhase: { select: { projectId: true, project: { select: { inspectorSeesAllDocuments: true, clientSeesAllDocuments: true } } } } },
   });
 }
 
@@ -273,7 +289,7 @@ export function getDocumentDetail(documentId: string) {
       reviewedBy: { select: { id: true, name: true } },
       documentTypeMaster: true,
       tags: { include: { tag: true } },
-      projectPhase: { select: { id: true, phase: true, project: { select: { id: true, name: true } } } },
+      projectPhase: { select: { id: true, phase: true, project: { select: { id: true, name: true, inspectorSeesAllDocuments: true, clientSeesAllDocuments: true } } } },
       versions: {
         orderBy: { versionNumber: "desc" },
         include: {
@@ -303,6 +319,18 @@ export async function updateDocumentStatus(params: {
           : {}),
       },
     });
+
+    // Approving a document (via /approve, the Document-level workflow) previously
+    // left DocumentVersion.approvedById/approvedAt untouched — those columns were
+    // only ever written by the separate PUT /status (version-level) endpoint, so
+    // "who approved this and when" had no answer on the approval path actually
+    // used by the app. Mirror it onto the current version here.
+    if (params.auditAction === "APPROVE") {
+      await tx.documentVersion.updateMany({
+        where: { documentId: params.documentId, isCurrent: true },
+        data: { approvedById: params.actorId, approvedAt: new Date() },
+      });
+    }
 
     await tx.auditLog.create({
       data: {
@@ -408,11 +436,21 @@ export async function listProjectDocuments(
 
   const phaseIds = phaseFilter.map((p) => p.id);
 
+  // Saklar bulk per proyek (Project.inspectorSeesAllDocuments/clientSeesAllDocuments)
+  // — dicek di sini (bukan dibebankan ke tiap route pemanggil) supaya semua
+  // jalur baca daftar dokumen proyek otomatis konsisten. Tidak melewati gate
+  // APPROVED-only Client (requiresApprovedOnly tetap dievaluasi terpisah).
+  const project = bypassVisibility ? null : await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { inspectorSeesAllDocuments: true, clientSeesAllDocuments: true },
+  });
+  const bypassVisibilityTier = bypassVisibility || resolveVisibilityBypass(viewerRole, project);
+
   return prisma.document.findMany({
     where: {
       projectPhaseId: { in: phaseIds },
       ...(filters.documentType && { documentType: filters.documentType }),
-      ...(!bypassVisibility && { visibility: { in: visibilityAllowlist(viewerRole) } }),
+      ...(!bypassVisibilityTier && { visibility: { in: visibilityAllowlist(viewerRole) } }),
       ...(!bypassVisibility && requiresApprovedOnly(viewerRole) && { status: "APPROVED" }),
     },
     include: docInclude,
@@ -571,7 +609,7 @@ const searchInclude = {
   documentTypeMaster: true,
   tags: { include: { tag: true } },
   projectPhase: {
-    select: { id: true, phase: true, project: { select: { id: true, name: true } } },
+    select: { id: true, phase: true, project: { select: { id: true, name: true, inspectorSeesAllDocuments: true, clientSeesAllDocuments: true } } },
   },
   versions: {
     where: { isCurrent: true },
@@ -703,7 +741,7 @@ export async function advancedSearchDocuments(
     ? results
     : results.filter((d) => {
         const role = effectiveRoleForProject(d.projectPhase.project.id, roleMap!, user.isGlobalInspector);
-        return canViewDocument(role, d.visibility, d.status);
+        return canViewDocument(role, d.visibility, d.status, resolveVisibilityBypass(role, d.projectPhase.project));
       });
 
   // contentText itself can be tens of thousands of characters — never send it

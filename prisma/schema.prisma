@@ -152,6 +152,17 @@ model Project {
   createdAt     DateTime      @default(now()) @map("created_at")
   updatedAt     DateTime      @updatedAt @map("updated_at")
 
+  // Saklar bulk per proyek: kalau true, peran itu melihat SEMUA dokumen di
+  // proyek ini terlepas dari visibility per-dokumen (lihat resolveVisibilityBypass()
+  // di document.service.ts) — supaya Team Leader tidak harus buka dokumen satu
+  // per satu untuk memberi akses. Kalau mau pengaturan custom per dokumen,
+  // matikan saklar ini dulu baru atur satu-satu seperti biasa.
+  // Default: Inspector defaultnya lihat semua (true); Client defaultnya TIDAK
+  // lihat apa pun sampai didaftarkan per-dokumen (false) — beda default sesuai
+  // peran, sesuai permintaan eksplisit.
+  inspectorSeesAllDocuments Boolean @default(true) @map("inspector_sees_all_documents")
+  clientSeesAllDocuments    Boolean @default(false) @map("client_sees_all_documents")
+
   createdBy User            @relation(fields: [createdById], references: [id])
   userRoles UserRole[]
   phases    ProjectPhase[]

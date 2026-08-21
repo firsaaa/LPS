@@ -190,30 +190,46 @@ export async function toggleActionItem(params: {
   itemId: string;
   requestedLinkedDocumentId: string | null;
   closedNote: string | null;
-}) {
+}): Promise<{ error: "not_found" } | { error: "evidence_required" } | { error: "evidence_type_mismatch" } | Awaited<ReturnType<typeof updateActionItem>>> {
   const item = await prisma.actionItem.findUnique({ where: { id: params.itemId } });
-  if (!item || item.notulenId !== params.notulenId) return null;
+  if (!item || item.notulenId !== params.notulenId) return { error: "not_found" };
 
   const newStatus = item.status === "OPEN" ? "CLOSED" : "OPEN";
 
   let linkedDocumentId = params.requestedLinkedDocumentId ?? item.linkedDocumentId ?? null;
   if (newStatus === "OPEN") linkedDocumentId = null;
 
+  let linkedDocTypeId: string | null = null;
   if (linkedDocumentId) {
     const notulen = await prisma.notulen.findUnique({ where: { id: params.notulenId }, select: { projectId: true } });
     const doc = await prisma.document.findFirst({
       where: { id: linkedDocumentId, projectPhase: { projectId: notulen?.projectId } },
-      select: { id: true },
+      select: { id: true, documentTypeId: true },
     });
     if (!doc) linkedDocumentId = null;
+    else linkedDocTypeId = doc.documentTypeId;
   }
 
+  // FR-32: tindak lanjut yang mensyaratkan jenis dokumen bukti tertentu
+  // (requiredDocumentTypeId, ditetapkan saat notulen dibuat — lihat FN-01)
+  // tidak boleh ditutup tanpa bukti yang sesuai. Sebelumnya TIDAK ada
+  // pemeriksaan ini sama sekali (temuan FN-04) — siapa pun bisa menutup
+  // tindak lanjut tanpa benar-benar melampirkan bukti.
+  if (newStatus === "CLOSED" && item.requiredDocumentTypeId) {
+    if (!linkedDocumentId) return { error: "evidence_required" };
+    if (linkedDocTypeId !== item.requiredDocumentTypeId) return { error: "evidence_type_mismatch" };
+  }
+
+  return updateActionItem(params.itemId, newStatus, linkedDocumentId, params.closedNote);
+}
+
+function updateActionItem(itemId: string, newStatus: "OPEN" | "CLOSED", linkedDocumentId: string | null, closedNote: string | null) {
   return prisma.actionItem.update({
-    where: { id: params.itemId },
+    where: { id: itemId },
     data: {
       status: newStatus,
       closedAt: newStatus === "CLOSED" ? new Date() : null,
-      closedNote: newStatus === "CLOSED" ? params.closedNote : null,
+      closedNote: newStatus === "CLOSED" ? closedNote : null,
       linkedDocumentId,
     },
     include: {

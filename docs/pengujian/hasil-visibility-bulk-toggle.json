@@ -1,0 +1,57 @@
+{
+  "dijalankan": "2026-08-21T12:35:03.477Z",
+  "total": 6,
+  "pass": 6,
+  "fail": 0,
+  "hasil": [
+    {
+      "kode": "VIS-01",
+      "jenis": "Positive",
+      "deskripsi": "Default proyek baru: inspectorSeesAllDocuments=true, clientSeesAllDocuments=false",
+      "expected": "true, false",
+      "actual": "true, false",
+      "status": "PASS"
+    },
+    {
+      "kode": "VIS-02",
+      "jenis": "Positive",
+      "deskripsi": "Inspector (bulk toggle ON, default) bisa GET dokumen visibility=INTERNAL yang normalnya di luar aksesnya",
+      "expected": "HTTP 200",
+      "actual": "HTTP 200",
+      "status": "PASS"
+    },
+    {
+      "kode": "VIS-03",
+      "jenis": "Negative",
+      "deskripsi": "Setelah toggle Inspector dimatikan, Inspector kembali ditolak dari dokumen INTERNAL (kembali ke aturan per-dokumen)",
+      "expected": "HTTP 403",
+      "actual": "HTTP 403",
+      "status": "PASS"
+    },
+    {
+      "kode": "VIS-04",
+      "jenis": "Positive",
+      "deskripsi": "Client (bulk toggle OFF, default) tidak bisa GET dokumen visibility=INTERNAL — harus di-custom satu-satu seperti biasa",
+      "expected": "HTTP 403",
+      "actual": "HTTP 403",
+      "status": "PASS"
+    },
+    {
+      "kode": "VIS-05",
+      "jenis": "Positive",
+      "deskripsi": "Setelah toggle Client dinyalakan, Client bisa GET dokumen visibility=INTERNAL (APPROVED — gate status tetap terpisah)",
+      "expected": "HTTP 200",
+      "actual": "HTTP 200",
+      "status": "PASS"
+    },
+    {
+      "kode": "VIS-06",
+      "jenis": "Negative",
+      "deskripsi": "Toggle Client ON hanya melewati gate VISIBILITAS, TIDAK melewati gate APPROVED-only (dokumen belum APPROVED tetap ditolak)",
+      "expected": "HTTP 403 untuk dokumen INTERNAL yang belum APPROVED",
+      "actual": "Dokumen status=DRAFT, HTTP 403",
+      "status": "PASS"
+    }
+  ],
+  "temuan": []
+}

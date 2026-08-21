@@ -1,0 +1,270 @@
+{
+  "dijalankan": "2026-08-21T12:36:48.707Z",
+  "total": 31,
+  "pass": 31,
+  "fail": 0,
+  "hasil": [
+    {
+      "kode": "UT-30a",
+      "jenis": "Positive",
+      "deskripsi": "Transisi sah DRAFT -> UNDER_REVIEW diterima",
+      "expected": "VALID_TRANSITIONS[\"DRAFT\"] memuat \"UNDER_REVIEW\"",
+      "actual": "VALID_TRANSITIONS[\"DRAFT\"] = [UNDER_REVIEW] memuat \"UNDER_REVIEW\": true",
+      "status": "PASS"
+    },
+    {
+      "kode": "UT-30b",
+      "jenis": "Positive",
+      "deskripsi": "Transisi sah UNDER_REVIEW -> APPROVED diterima",
+      "expected": "VALID_TRANSITIONS[\"UNDER_REVIEW\"] memuat \"APPROVED\"",
+      "actual": "VALID_TRANSITIONS[\"UNDER_REVIEW\"] = [APPROVED, REVISION_REQUESTED, REJECTED] memuat \"APPROVED\": true",
+      "status": "PASS"
+    },
+    {
+      "kode": "UT-30c",
+      "jenis": "Positive",
+      "deskripsi": "Transisi sah UNDER_REVIEW -> REVISION_REQUESTED diterima",
+      "expected": "VALID_TRANSITIONS[\"UNDER_REVIEW\"] memuat \"REVISION_REQUESTED\"",
+      "actual": "VALID_TRANSITIONS[\"UNDER_REVIEW\"] = [APPROVED, REVISION_REQUESTED, REJECTED] memuat \"REVISION_REQUESTED\": true",
+      "status": "PASS"
+    },
+    {
+      "kode": "UT-30d",
+      "jenis": "Positive",
+      "deskripsi": "Transisi sah UNDER_REVIEW -> REJECTED diterima",
+      "expected": "VALID_TRANSITIONS[\"UNDER_REVIEW\"] memuat \"REJECTED\"",
+      "actual": "VALID_TRANSITIONS[\"UNDER_REVIEW\"] = [APPROVED, REVISION_REQUESTED, REJECTED] memuat \"REJECTED\": true",
+      "status": "PASS"
+    },
+    {
+      "kode": "UT-30e",
+      "jenis": "Positive",
+      "deskripsi": "Transisi sah APPROVED -> ARCHIVED diterima",
+      "expected": "VALID_TRANSITIONS[\"APPROVED\"] memuat \"ARCHIVED\"",
+      "actual": "VALID_TRANSITIONS[\"APPROVED\"] = [ARCHIVED] memuat \"ARCHIVED\": true",
+      "status": "PASS"
+    },
+    {
+      "kode": "UT-30f",
+      "jenis": "Positive",
+      "deskripsi": "Transisi sah REVISION_REQUESTED -> UNDER_REVIEW diterima",
+      "expected": "VALID_TRANSITIONS[\"REVISION_REQUESTED\"] memuat \"UNDER_REVIEW\"",
+      "actual": "VALID_TRANSITIONS[\"REVISION_REQUESTED\"] = [UNDER_REVIEW] memuat \"UNDER_REVIEW\": true",
+      "status": "PASS"
+    },
+    {
+      "kode": "UT-30g",
+      "jenis": "Positive",
+      "deskripsi": "Transisi sah REJECTED -> UNDER_REVIEW diterima",
+      "expected": "VALID_TRANSITIONS[\"REJECTED\"] memuat \"UNDER_REVIEW\"",
+      "actual": "VALID_TRANSITIONS[\"REJECTED\"] = [UNDER_REVIEW] memuat \"UNDER_REVIEW\": true",
+      "status": "PASS"
+    },
+    {
+      "kode": "UT-31",
+      "jenis": "Negative",
+      "deskripsi": "Transisi melompat DRAFT -> APPROVED (tanpa lewat UNDER_REVIEW) ditolak",
+      "expected": "VALID_TRANSITIONS[\"DRAFT\"] TIDAK memuat \"APPROVED\"",
+      "actual": "VALID_TRANSITIONS[\"DRAFT\"] = [UNDER_REVIEW] — tidak memuat APPROVED",
+      "status": "PASS"
+    },
+    {
+      "kode": "UT-32",
+      "jenis": "Negative",
+      "deskripsi": "Transisi mundur dari status akhir ARCHIVED -> DRAFT ditolak",
+      "expected": "VALID_TRANSITIONS[\"ARCHIVED\"] TIDAK memuat \"DRAFT\" (dan kosong sama sekali)",
+      "actual": "VALID_TRANSITIONS[\"ARCHIVED\"] = [(kosong)]",
+      "status": "PASS"
+    },
+    {
+      "kode": "UT-33",
+      "jenis": "Negative",
+      "deskripsi": "Status yang tidak dikenal ditolak, tidak melempar exception yang tak tertangani",
+      "expected": "isValidTransition() tidak melempar exception untuk status di luar enum, dan mengembalikan false (ditolak dengan aman)",
+      "actual": "isValidTransition(\"STATUS_TIDAK_DIKENAL\", \"DRAFT\") = false, tidak melempar exception",
+      "status": "PASS"
+    },
+    {
+      "kode": "UT-34",
+      "jenis": "Positive",
+      "deskripsi": "Status akhir (ARCHIVED) tidak memiliki transisi keluar sama sekali",
+      "expected": "VALID_TRANSITIONS[\"ARCHIVED\"].length === 0",
+      "actual": "VALID_TRANSITIONS[\"ARCHIVED\"].length = 0",
+      "status": "PASS"
+    },
+    {
+      "kode": "UT-35a",
+      "jenis": "Positive",
+      "deskripsi": "Prefix terbentuk benar untuk fase INISIASI (LGM/KTR)",
+      "expected": "\"LGM-AWL-KTR-\"",
+      "actual": "\"LGM-AWL-KTR-\"",
+      "status": "PASS"
+    },
+    {
+      "kode": "UT-35b",
+      "jenis": "Positive",
+      "deskripsi": "Prefix terbentuk benar untuk fase ASSESSMENT (LGM/RSK)",
+      "expected": "\"LGM-ASM-RSK-\"",
+      "actual": "\"LGM-ASM-RSK-\"",
+      "status": "PASS"
+    },
+    {
+      "kode": "UT-35c",
+      "jenis": "Positive",
+      "deskripsi": "Prefix terbentuk benar untuk fase DESIGN (LGM/DES)",
+      "expected": "\"LGM-DES-DES-\"",
+      "actual": "\"LGM-DES-DES-\"",
+      "status": "PASS"
+    },
+    {
+      "kode": "UT-35d",
+      "jenis": "Positive",
+      "deskripsi": "Prefix terbentuk benar untuk fase IMPLEMENTASI (LGM/LHR)",
+      "expected": "\"LGM-IMP-LHR-\"",
+      "actual": "\"LGM-IMP-LHR-\"",
+      "status": "PASS"
+    },
+    {
+      "kode": "UT-35e",
+      "jenis": "Positive",
+      "deskripsi": "Prefix terbentuk benar untuk fase COMMISSIONING (LGM/LOG)",
+      "expected": "\"LGM-CMS-LOG-\"",
+      "actual": "\"LGM-CMS-LOG-\"",
+      "status": "PASS"
+    },
+    {
+      "kode": "UT-35f",
+      "jenis": "Positive",
+      "deskripsi": "Prefix terbentuk benar untuk fase INSPEKSI_BERKALA (LGM/LIB)",
+      "expected": "\"LGM-INS-LIB-\"",
+      "actual": "\"LGM-INS-LIB-\"",
+      "status": "PASS"
+    },
+    {
+      "kode": "UT-36a",
+      "jenis": "Positive",
+      "deskripsi": "Nomor urut 1 diformat 3 digit dengan nol di depan -> \"001\"",
+      "expected": "\"001\"",
+      "actual": "\"001\"",
+      "status": "PASS"
+    },
+    {
+      "kode": "UT-36b",
+      "jenis": "Positive",
+      "deskripsi": "Nomor urut 42 diformat 3 digit dengan nol di depan -> \"042\"",
+      "expected": "\"042\"",
+      "actual": "\"042\"",
+      "status": "PASS"
+    },
+    {
+      "kode": "UT-37a",
+      "jenis": "Positive",
+      "deskripsi": "Nomor urut bertambah 1 dari nomor tertinggi yang sudah ada (berurutan: 001,002)",
+      "expected": "3",
+      "actual": "3",
+      "status": "PASS"
+    },
+    {
+      "kode": "UT-37b",
+      "jenis": "Positive",
+      "deskripsi": "Nomor urut memakai NILAI TERTINGGI + 1, bukan jumlah baris + 1 (ada celah: 001,005 -> 6, bukan 3)",
+      "expected": "6 (bukan 3 — celah nomor 002-004 tidak diisi ulang, konsisten dengan generateDocumentCode() asli)",
+      "actual": "6",
+      "status": "PASS"
+    },
+    {
+      "kode": "UT-38a",
+      "jenis": "Negative",
+      "deskripsi": "typeCode kosong pada buildCodePrefix ditangani — melempar Error, tidak menghasilkan tanda hubung ganda",
+      "expected": "Melempar Error (bukan menghasilkan \"LGM-ASM--\")",
+      "actual": "buildCodePrefix melempar Error untuk typeCode kosong (tidak lagi menghasilkan string cacat)",
+      "status": "PASS"
+    },
+    {
+      "kode": "UT-38b",
+      "jenis": "Negative",
+      "deskripsi": "projectCode kosong pada buildCodePrefix ditangani — melempar Error, tidak menghasilkan prefix diawali tanda hubung",
+      "expected": "Melempar Error (bukan menghasilkan \"-ASM-DOC-\")",
+      "actual": "buildCodePrefix melempar Error untuk projectCode kosong",
+      "status": "PASS"
+    },
+    {
+      "kode": "UT-38c",
+      "jenis": "Negative",
+      "deskripsi": "Fase tidak dikenal pada buildCodePrefix ditangani — melempar Error, tidak menghasilkan literal \"undefined\" di kode",
+      "expected": "Melempar Error (bukan menghasilkan \"LGM-undefined-DOC-\")",
+      "actual": "buildCodePrefix melempar Error untuk fase tidak dikenal",
+      "status": "PASS"
+    },
+    {
+      "kode": "UT-39",
+      "jenis": "Positive",
+      "deskripsi": "Kode yang dihasilkan konsisten bila fungsi dipanggil dengan masukan yang sama (2x berturut-turut)",
+      "expected": "Prefix dan nomor urut identik pada kedua pemanggilan",
+      "actual": "prefix: \"LGM-ASM-RSK-\" === \"LGM-ASM-RSK-\"; seq: 2 === 2",
+      "status": "PASS"
+    },
+    {
+      "kode": "UT-40",
+      "jenis": "Positive",
+      "deskripsi": "Nol dari dokumen wajib terpenuhi (semua DRAFT) menghasilkan 0 persen",
+      "expected": "percent = 0",
+      "actual": "fulfilled=0, required=2, percent=0",
+      "status": "PASS"
+    },
+    {
+      "kode": "UT-41",
+      "jenis": "Positive",
+      "deskripsi": "2 dari 3 dokumen wajib terpenuhi -> pembulatan 67 persen",
+      "expected": "percent = 67 (Math.round(2/3*100))",
+      "actual": "fulfilled=2, required=3, percent=67",
+      "status": "PASS"
+    },
+    {
+      "kode": "UT-42",
+      "jenis": "Positive",
+      "deskripsi": "Seluruh dokumen wajib terpenuhi menghasilkan 100 persen",
+      "expected": "percent = 100",
+      "actual": "fulfilled=2, required=2, percent=100",
+      "status": "PASS"
+    },
+    {
+      "kode": "UT-43",
+      "jenis": "Negative",
+      "deskripsi": "Dokumen berstatus ARCHIVED tidak dihitung sebagai terpenuhi",
+      "expected": "Dokumen wajib yang cuma punya versi ARCHIVED tetap dianggap belum fulfilled -> percent = 0",
+      "actual": "fulfilled=0, percent=0 (status dokumen: ARCHIVED, bukan APPROVED)",
+      "status": "PASS"
+    },
+    {
+      "kode": "UT-44",
+      "jenis": "Negative",
+      "deskripsi": "Fase tanpa dokumen wajib sama sekali tidak menghasilkan pembagian dengan nol",
+      "expected": "Tidak error/NaN; percent = 100 (required.length === 0 -> dianggap lengkap)",
+      "actual": "required=0, percent=100 (tidak NaN, tidak throw)",
+      "status": "PASS"
+    },
+    {
+      "kode": "UT-45",
+      "jenis": "Negative",
+      "deskripsi": "Dokumen opsional (isOptional=true) tidak ikut memengaruhi persentase",
+      "expected": "Dokumen opsional yang belum ada sama sekali tidak menurunkan percent — tetap 100 selama yang WAJIB terpenuhi",
+      "actual": "required=1 (t2 opsional dikeluarkan), fulfilled=1, percent=100",
+      "status": "PASS"
+    }
+  ],
+  "temuan": [
+    {
+      "catatan": "DIPERBAIKI — UT-33 sebelumnya GAGAL, sekarang PASS",
+      "file": "src/lib/document-status.ts (isValidTransition, baru); src/app/api/documents/[id]/approve/route.ts (memakai isValidTransition() alih-alih akses langsung tabel)",
+      "baris": "isValidTransition() baru di document-status.ts; approve/route.ts baris pemeriksaan transisi",
+      "isi": "Sebelumnya, mengakses VALID_TRANSITIONS dengan key di luar 6 nilai enum menghasilkan `undefined`, dan `.includes()` pada `undefined` melempar TypeError. Sekarang ditambah isValidTransition(from, to) yang mengembalikan false dengan aman (`?? false`) untuk key tak dikenal, dan approve/route.ts memakai fungsi ini alih-alih akses tabel langsung. Diperbaiki atas instruksi eksplisit penulis (\"benerin bug-bugnya dulu\"), bukan inisiatif sepihak sebelumnya."
+    },
+    {
+      "catatan": "DIPERBAIKI — UT-38a/b/c sebelumnya GAGAL, sekarang PASS",
+      "file": "src/lib/services/document-code.service.ts",
+      "baris": "buildCodePrefix (validasi baru ditambahkan di awal fungsi)",
+      "isi": "Sebelumnya buildCodePrefix(projectCode, phase, typeCode) sekadar menggabungkan string tanpa validasi: typeCode kosong -> \"LGM-ASM--\", projectCode kosong -> \"-ASM-DOC-\", phase tak dikenal -> \"LGM-undefined-DOC-\". Sekarang fungsi ini melempar Error yang jelas untuk ketiga kasus tersebut sebelum sempat menghasilkan string apa pun. Diperbaiki atas instruksi eksplisit penulis. Tetap tidak pernah tereksekusi lewat alur upload normal (projectCode/phase/typeCode semuanya dijamin valid oleh pemanggil), perbaikan ini murni pengaman tambahan."
+    }
+  ]
+}

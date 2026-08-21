@@ -29,7 +29,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     canLeadProject?: boolean;
   };
 
-  const result = await updateUser(id, { name, isActive, globalRole, canLeadProject });
+  const result = await updateUser(id, { name, isActive, globalRole, canLeadProject, actorId: user.id });
   if ("error" in result) return notFound("User tidak ditemukan");
 
   return ok({ success: true });

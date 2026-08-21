@@ -14,8 +14,20 @@ const PHASE_CODE: Record<LpsPhase, string> = {
   INSPEKSI_BERKALA: "INS",
 };
 
+/**
+ * Melempar error (bukan menghasilkan kode cacat seperti tanda hubung ganda
+ * atau literal "undefined") kalau salah satu komponen kosong/tidak dikenal —
+ * temuan UT-38. Tidak pernah tereksekusi lewat alur upload normal (projectCode
+ * dijamin ada oleh findUniqueOrThrow di generateDocumentCode(), phase dijamin
+ * enum Prisma, typeCode dijamin NOT NULL+UNIQUE dari DocumentTypeMaster) —
+ * murni pengaman kalau fungsi ini dipakai ulang di konteks lain tanpa jaminan yang sama.
+ */
 export function buildCodePrefix(projectCode: string, phase: LpsPhase, typeCode: string) {
-  return `${projectCode}-${PHASE_CODE[phase]}-${typeCode}-`;
+  if (!projectCode) throw new Error("buildCodePrefix: projectCode tidak boleh kosong");
+  if (!typeCode) throw new Error("buildCodePrefix: typeCode tidak boleh kosong");
+  const phaseCode = PHASE_CODE[phase];
+  if (!phaseCode) throw new Error(`buildCodePrefix: fase tidak dikenal: "${phase}"`);
+  return `${projectCode}-${phaseCode}-${typeCode}-`;
 }
 
 /** Derives a 3-letter project code from a project name's initials, e.g. "LPS Gedung Mewah Tower A" -> "LGM". */
@@ -24,6 +36,26 @@ export function deriveProjectCode(name: string): string {
   let letters = words.map((w) => w[0]!.toUpperCase()).join("");
   if (letters.length < 3) letters = (name.replace(/\s+/g, "").toUpperCase() + "XXX").slice(0, 3);
   return letters.slice(0, 3);
+}
+
+/**
+ * Pure: derives the next sequence number for a code prefix from the full list
+ * of existing document codes sharing that prefix — highest existing sequence
+ * + 1 (not existingCodes.length + 1, so a deleted middle entry never causes a
+ * collision). Extracted from generateDocumentCode() so this part of the logic
+ * is unit-testable without a database.
+ */
+export function nextSequenceForPrefix(existingCodesWithPrefix: string[], prefix: string): number {
+  const maxSeq = existingCodesWithPrefix.reduce((max, code) => {
+    const seq = parseInt(code.slice(prefix.length), 10);
+    return Number.isNaN(seq) ? max : Math.max(max, seq);
+  }, 0);
+  return maxSeq + 1;
+}
+
+/** Pure: zero-pads a sequence number to 3 digits (1 -> "001", 42 -> "042"). */
+export function formatSequence(seq: number): string {
+  return seq.toString().padStart(3, "0");
 }
 
 /**
@@ -46,11 +78,8 @@ export async function generateDocumentCode(projectId: string, phase: LpsPhase, t
             where: { documentCode: { startsWith: prefix } },
             select: { documentCode: true },
           });
-          const maxSeq = existing.reduce((max, d) => {
-            const seq = parseInt(d.documentCode!.slice(prefix.length), 10);
-            return Number.isNaN(seq) ? max : Math.max(max, seq);
-          }, 0);
-          return `${prefix}${(maxSeq + 1).toString().padStart(3, "0")}`;
+          const seq = nextSequenceForPrefix(existing.map((d) => d.documentCode!), prefix);
+          return `${prefix}${formatSequence(seq)}`;
         },
         { isolationLevel: "Serializable" }
       );

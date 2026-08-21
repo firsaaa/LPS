@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getUserProjectIds, getUserProjectRole } from "@/lib/api-helpers";
 import { deriveProjectCode } from "@/lib/services/document-code.service";
-import { visibilityAllowlist, requiresApprovedOnly } from "@/lib/services/document.service";
+import { visibilityAllowlist, requiresApprovedOnly, resolveVisibilityBypass } from "@/lib/services/document.service";
 import type { LpsPhase, ProjectStatus, Role } from "@prisma/client";
 import type { ProjectRole } from "@/types";
 
@@ -231,7 +231,8 @@ export async function getProjectById(id: string, viewerRole: Role | null, bypass
   // A CLIENT (or any lower-clearance viewer) must never receive internal
   // drafts/contracts/cost documents in the raw payload, not just have them
   // hidden by the client-portal UI — filter server-side per document.
-  const allowlist = bypassVisibility ? null : visibilityAllowlist(viewerRole);
+  const bypassVisibilityTier = bypassVisibility || resolveVisibilityBypass(viewerRole, project);
+  const allowlist = bypassVisibilityTier ? null : visibilityAllowlist(viewerRole);
   const approvedOnly = !bypassVisibility && requiresApprovedOnly(viewerRole);
   const phases = allowlist
     ? project.phases.map((ph) => ({
@@ -251,6 +252,8 @@ export async function updateProject(id: string, actor: { id: string; isSuperadmi
   status?: string;
   startDate?: string | null;
   targetEndDate?: string | null;
+  inspectorSeesAllDocuments?: boolean;
+  clientSeesAllDocuments?: boolean;
 }) {
   const project = await prisma.project.findUnique({ where: { id } });
   if (!project) return { error: "not_found" as const };
@@ -270,6 +273,8 @@ export async function updateProject(id: string, actor: { id: string; isSuperadmi
       ...(data.status && { status: data.status as any }),
       ...(data.startDate !== undefined && { startDate: data.startDate ? new Date(data.startDate) : null }),
       ...(data.targetEndDate !== undefined && { targetEndDate: data.targetEndDate ? new Date(data.targetEndDate) : null }),
+      ...(data.inspectorSeesAllDocuments !== undefined && { inspectorSeesAllDocuments: data.inspectorSeesAllDocuments }),
+      ...(data.clientSeesAllDocuments !== undefined && { clientSeesAllDocuments: data.clientSeesAllDocuments }),
     },
   });
 

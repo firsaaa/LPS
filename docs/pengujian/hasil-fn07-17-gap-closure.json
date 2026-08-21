@@ -1,0 +1,104 @@
+{
+  "dijalankan": "2026-08-21T12:36:52.761Z",
+  "total": 11,
+  "pass": 11,
+  "fail": 0,
+  "hasil": [
+    {
+      "kode": "FN-07",
+      "jenis": "Positive",
+      "deskripsi": "Upload dokumen ke fase aktif (ASSESSMENT) dengan jenis dokumen valid (DOC)",
+      "expected": "HTTP 201; document.projectPhaseId = fase yang dipilih; document.documentTypeId = jenis yang dipilih; documentCode terbentuk otomatis (tidak kosong)",
+      "actual": "HTTP 201; projectPhaseId=cmsvrf4mo0011dnrjm10vp6p3; documentTypeId=cmsvrf2kv000ddnrjgmd2owtm; documentCode=LGM-ASM-DOC-006",
+      "status": "PASS"
+    },
+    {
+      "kode": "FN-08",
+      "jenis": "Positive",
+      "deskripsi": "Pola documentCode hasil FN-07 sesuai document-code.service.ts (buildCodePrefix + generateDocumentCode)",
+      "expected": "documentCode = \"LGM-ASM-DOC-006\" (prefix proyek+fase+tipe dari buildCodePrefix(), urut 3-digit dari generateDocumentCode())",
+      "actual": "documentCode = \"LGM-ASM-DOC-006\"",
+      "status": "PASS"
+    },
+    {
+      "kode": "FN-09",
+      "jenis": "Positive",
+      "deskripsi": "Upload dua dokumen berjenis sama pada project+fase yang sama — nomor urut bertambah, tidak duplikat",
+      "expected": "Dokumen kedua mendapat documentCode \"LGM-ASM-DOC-007\" (bertambah 1 dari dokumen pertama), berbeda dari dokumen pertama",
+      "actual": "HTTP 201; documentCode kedua=\"LGM-ASM-DOC-007\"; documentCode pertama=\"LGM-ASM-DOC-006\"",
+      "status": "PASS"
+    },
+    {
+      "kode": "FN-10",
+      "jenis": "Negative",
+      "deskripsi": "Upload berkas dengan ekstensi di luar daftar yang diizinkan (.exe, bukan bagian dari ALLOWED_UPLOAD_EXTENSIONS di src/types/index.ts)",
+      "expected": "Ditolak (HTTP 4xx), dokumen TIDAK tersimpan di database",
+      "actual": "HTTP 400 (Tipe file tidak didukung); ditemukan di DB: false",
+      "status": "PASS"
+    },
+    {
+      "kode": "FN-11",
+      "jenis": "Negative",
+      "deskripsi": "Upload dokumen tanpa documentTypeId, DAN dengan documentTypeId yang tidak ada di database",
+      "expected": "Kedua kasus ditolak dengan HTTP 4xx",
+      "actual": "Tanpa documentTypeId: HTTP 400 (phase, documentTypeId, dan title wajib diisi). documentTypeId tidak ada: HTTP 400 (Jenis dokumen tidak ditemukan)",
+      "status": "PASS"
+    },
+    {
+      "kode": "FN-12",
+      "jenis": "Negative",
+      "deskripsi": "Engineer upload dokumen ke fase COMMISSIONING milik Tower A, yang isActive=false",
+      "expected": "Ditolak (HTTP 4xx), dokumen tidak tersimpan",
+      "actual": "HTTP 400 (Fase ini belum diaktifkan oleh Team Leader — minta Team Leader menyalakan \"Fase Aktif\" dulu sebelum upload); ditemukan di DB: false",
+      "status": "PASS"
+    },
+    {
+      "kode": "FN-13",
+      "jenis": "Positive",
+      "deskripsi": "Cari dengan kata kunci yang hanya ada di dalam isi berkas (xlsx sungguhan), bukan di judul",
+      "expected": "Dokumen yang benar muncul di hasil pencarian",
+      "actual": "Upload HTTP 201; contentText mengandung keyword: true; muncul di hasil pencarian: true; jumlah hasil: 1",
+      "status": "PASS"
+    },
+    {
+      "kode": "FN-14",
+      "jenis": "Negative",
+      "deskripsi": "User (leader2, TEAM_LEADER proyek lain, BUKAN anggota Tower A) mencari kata kunci yang hanya ada pada dokumen milik Tower A",
+      "expected": "Hasil kosong — dokumen proyek yang tidak diikuti tidak bocor lewat pencarian isi",
+      "actual": "HTTP 200; count=0; dokumen Tower A ikut muncul: false",
+      "status": "PASS"
+    },
+    {
+      "kode": "FN-15",
+      "jenis": "Negative",
+      "deskripsi": "Menautkan dokumen (Tower A) ke dokumen yang berada di project berbeda (Mall Central)",
+      "expected": "Ditolak (HTTP 4xx, error different_project)",
+      "actual": "HTTP 400 (Dokumen dasar harus berada di proyek yang sama)",
+      "status": "PASS"
+    },
+    {
+      "kode": "FN-16",
+      "jenis": "Negative",
+      "deskripsi": "Menautkan dokumen ke dirinya sendiri",
+      "expected": "Ditolak (HTTP 4xx, error self_reference)",
+      "actual": "HTTP 400 (Dokumen tidak bisa menjadi dasar untuk dirinya sendiri)",
+      "status": "PASS"
+    },
+    {
+      "kode": "FN-17",
+      "jenis": "Negative",
+      "deskripsi": "Arsipkan satu dokumen wajib (APPROVED, required doc fase COMMISSIONING proyek LRH), lalu panggil GET /api/projects/[id] untuk kelengkapan fase",
+      "expected": "Dokumen berstatus ARCHIVED tidak dihitung lagi sebagai dokumen lengkap; persentase kelengkapan fase COMMISSIONING turun",
+      "actual": "Arsip: HTTP 200, status dokumen sesudah=ARCHIVED. Kelengkapan COMMISSIONING sebelum=100%, sesudah=67%",
+      "status": "PASS"
+    }
+  ],
+  "temuan": [
+    {
+      "catatan": "NUANSA DESAIN (bukan kegagalan test) — dibaca langsung dari kode, tidak diuji ulang di sini supaya tidak mengubah state fase Tower A lebih lanjut",
+      "file": "src/lib/services/document.service.ts",
+      "baris": "446-454 (createProjectDocument)",
+      "isi": "Upload ke fase isActive=false HANYA ditolak (error \"phase_inactive\") kalau pengunggah BUKAN Team Leader/Superadmin (params.canActivatePhase === false). Kalau Team Leader ATAU Superadmin yang upload ke fase non-aktif, kode ini justru MENGAKTIFKAN fase tersebut secara otomatis (projectPhase.update isActive:true) lalu tetap mengizinkan upload — sama sekali tidak ditolak. Jadi FN-12 (\"Ditolak\") hanya benar untuk peran ENGINEER; untuk TEAM_LEADER/SUPERADMIN, perilaku sebenarnya adalah AUTO-AKTIVASI FASE + upload berhasil, bukan penolakan. Kalau skripsi mendeskripsikan aturan ini sebagai berlaku ke SEMUA peran, itu perlu diperbaiki rumusannya — atau kalau memang dimaksudkan sebagai perilaku khusus Team Leader (\"Team Leader bisa mengaktifkan fase implisit lewat upload\"), maka ini sesuai desain."
+    }
+  ]
+}

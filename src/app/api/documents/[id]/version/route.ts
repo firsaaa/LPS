@@ -10,7 +10,7 @@ import {
   forbidden,
   notFound,
 } from "@/lib/api-helpers";
-import { getDocumentWithProject, listDocumentVersions, createDocumentVersion, canViewDocument } from "@/lib/services/document.service";
+import { getDocumentWithProject, listDocumentVersions, createDocumentVersion, canViewDocument, resolveVisibilityBypass } from "@/lib/services/document.service";
 import { parseMultipartUpload, cleanupTempUpload } from "@/lib/upload-stream";
 import { MAX_UPLOAD_SIZE_BYTES } from "@/types";
 
@@ -31,7 +31,7 @@ export async function GET(
   if (!user.isSuperadmin) {
     const role = await getUserProjectRole(user.id, projectId);
     if (!role) return forbidden();
-    if (!canViewDocument(role, doc.visibility, doc.status)) return forbidden();
+    if (!canViewDocument(role, doc.visibility, doc.status, resolveVisibilityBypass(role, doc.projectPhase.project))) return forbidden();
   }
 
   const versions = await listDocumentVersions(documentId);

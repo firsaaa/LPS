@@ -1,0 +1,78 @@
+{
+  "dijalankan": "2026-08-21T12:37:05.832Z",
+  "total": 7,
+  "pass": 7,
+  "fail": 0,
+  "hasil": [
+    {
+      "kode": "FN-18",
+      "jenis": "Positive",
+      "deskripsi": "Superadmin membuat akun pengguna baru melalui endpoint POST /api/users",
+      "expected": "HTTP 2xx, user tersimpan, password tersimpan sebagai hash (bukan plaintext)",
+      "actual": "HTTP 201; user tersimpan: true; passwordHash berbentuk bcrypt & bukan plaintext: true; tercatat di audit_log (entity=\"user\"): true",
+      "status": "PASS"
+    },
+    {
+      "kode": "FN-19",
+      "jenis": "Positive",
+      "deskripsi": "Superadmin mengubah data pengguna yang sudah ada (nama & status aktif) lewat PATCH /api/users/[id]",
+      "expected": "HTTP 2xx, perubahan tersimpan di database, updatedAt berubah (bertambah)",
+      "actual": "HTTP 200; name sesudah=\"User Uji FN-19 (Diubah)\"; isActive sesudah=false; updatedAt sebelum=2026-08-21T12:37:03.362Z, sesudah=2026-08-21T12:37:04.762Z",
+      "status": "PASS"
+    },
+    {
+      "kode": "FN-20",
+      "jenis": "Negative",
+      "deskripsi": "Membuat akun dengan email yang sudah terdaftar (memakai email FN-18)",
+      "expected": "Ditolak (HTTP 4xx), tidak ada baris user baru di database",
+      "actual": "HTTP 400 (Email sudah terdaftar); jumlah baris dengan email ini sebelum=1, sesudah=1",
+      "status": "PASS"
+    },
+    {
+      "kode": "FN-21",
+      "jenis": "Positive",
+      "deskripsi": "Engineer submit dokumen DRAFT, lalu Team Leader project menyetujuinya (POST .../approve)",
+      "expected": "Status berpindah DRAFT -> UNDER_REVIEW -> APPROVED; approvedById dan approvedAt terisi",
+      "actual": "Transisi status: DRAFT -> UNDER_REVIEW -> APPROVED (DB akhir: APPROVED). DocumentVersion (isCurrent) approvedById=cmsvrf3j5000rdnrj1tim8jvf, approvedAt=2026-08-21T12:37:05.116Z (terisi: true) — SETELAH PERBAIKAN updateDocumentStatus() di document.service.ts (lihat temuan riwayat sebelumnya: field ini sebelumnya tidak pernah terisi lewat endpoint ini, sekarang sudah diperbaiki atas persetujuan eksplisit penulis).",
+      "status": "PASS"
+    },
+    {
+      "kode": "FN-22",
+      "jenis": "Positive",
+      "deskripsi": "Team Leader meminta revisi (action=revise) atas dokumen yang sedang UNDER_REVIEW, lalu Engineer upload versi baru",
+      "expected": "Status berpindah ke status revisi yang berlaku di sistem (REVISION_REQUESTED); Engineer dapat meng-upload versi baru sesudahnya",
+      "actual": "Status setelah revise: REVISION_REQUESTED. Upload versi baru: HTTP 201, jumlah versi dokumen sekarang=2. Status Document SETELAH upload versi baru: DRAFT (lihat temuan — createDocumentVersion() selalu me-reset status ke DRAFT)",
+      "status": "PASS"
+    },
+    {
+      "kode": "FN-23",
+      "jenis": "Positive",
+      "deskripsi": "Tautkan dokumen Commissioning (Log Pengujian) BASED_ON dokumen Desain APPROVED fase sebelumnya (LRH), telusuri dari kedua arah",
+      "expected": "Relasi tersimpan; dapat ditelusuri dari dokumen turunan (outgoing/references) MAUPUN dari dokumen acuan (incoming/referencedBy)",
+      "actual": "Link: HTTP 201. Dari dok. Commissioning (references, outgoing) memuat dok. Desain: true. Dari dok. Desain (referencedBy, incoming) memuat dok. Commissioning: true",
+      "status": "PASS"
+    },
+    {
+      "kode": "FN-24",
+      "jenis": "Positive",
+      "deskripsi": "Panggil GET /api/projects/[id] pada Tower A (komposisi dokumen diketahui dari query langsung), bandingkan kelengkapan per fase dengan perhitungan manual",
+      "expected": "Seluruh angka kelengkapan (required, fulfilled, percent) per fase cocok dengan perhitungan manual dari database",
+      "actual": "Manual: {\"INISIASI\":{\"required\":2,\"fulfilled\":1,\"percent\":50},\"ASSESSMENT\":{\"required\":1,\"fulfilled\":1,\"percent\":100},\"DESIGN\":{\"required\":3,\"fulfilled\":0,\"percent\":0},\"IMPLEMENTASI\":{\"required\":1,\"fulfilled\":1,\"percent\":100},\"COMMISSIONING\":{\"required\":3,\"fulfilled\":0,\"percent\":0},\"INSPEKSI_BERKALA\":{\"required\":1,\"fulfilled\":0,\"percent\":0}}. API: {\"INISIASI\":{\"required\":2,\"fulfilled\":1,\"percent\":50,\"isComplete\":false},\"ASSESSMENT\":{\"required\":1,\"fulfilled\":1,\"percent\":100,\"isComplete\":true},\"DESIGN\":{\"required\":3,\"fulfilled\":0,\"percent\":0,\"isComplete\":false},\"IMPLEMENTASI\":{\"required\":1,\"fulfilled\":1,\"percent\":100,\"isComplete\":true},\"COMMISSIONING\":{\"required\":3,\"fulfilled\":0,\"percent\":0,\"isComplete\":false},\"INSPEKSI_BERKALA\":{\"required\":1,\"fulfilled\":0,\"percent\":0,\"isComplete\":false}}. Fase yang tidak cocok: tidak ada",
+      "status": "PASS"
+    }
+  ],
+  "temuan": [
+    {
+      "catatan": "RIWAYAT — FN-21 sebelumnya GAGAL (dilaporkan di sesi pengujian FN-18..24 sebelumnya), sudah DIPERBAIKI atas keputusan eksplisit penulis",
+      "file": "src/lib/services/document.service.ts (updateDocumentStatus)",
+      "baris": "~307-317 (blok baru: `if (params.auditAction === \"APPROVE\") { await tx.documentVersion.updateMany(...) }`)",
+      "isi": "Sebelum perbaikan: POST /api/documents/[id]/approve (action=approve) hanya mengisi Document.reviewedById/reviewedAt, TIDAK PERNAH mengisi DocumentVersion.approvedById/approvedAt (field itu HANYA diisi oleh endpoint terpisah PUT /api/documents/[id]/status lewat updateCurrentVersionStatus). Setelah dikonfirmasi ke penulis, updateDocumentStatus() sekarang JUGA meng-update DocumentVersion yang isCurrent=true dengan approvedById+approvedAt saat auditAction=APPROVE — tidak perlu migrasi skema baru karena kolom itu sudah ada. Ini SATU-SATUNYA perbaikan kode aplikasi yang dilakukan sepanjang pengujian Bagian A/B/C, atas instruksi eksplisit penulis (bukan inisiatif sendiri untuk membuat test lolos) — dua endpoint approval (Document-level via /approve, dan DocumentVersion-level via /status) tetap merupakan dua mekanisme yang secara struktur terpisah; perbaikan ini hanya menjembatani satu sisi (approve -> ikut isi approvedById/approvedAt versi), tidak menyatukan kedua mekanisme sepenuhnya."
+    },
+    {
+      "catatan": "CATATAN (bukan kegagalan FN-22) — efek samping upload versi baru yang perlu diketahui",
+      "file": "src/lib/services/document.service.ts (createDocumentVersion)",
+      "baris": "379-382",
+      "isi": "Meng-upload versi baru (POST /api/documents/[id]/version) SELALU mereset Document.status kembali ke 'DRAFT' secara tanpa syarat (tx.document.update({ data: { ..., status: \"DRAFT\" } })) — tidak peduli status sebelumnya (di sini REVISION_REQUESTED). Jadi setelah Engineer upload versi revisi, dokumen tidak otomatis kembali ke UNDER_REVIEW/REVISION_REQUESTED, melainkan balik ke DRAFT, dan perlu di-submit ulang manual (action=submit) sebelum bisa direview lagi. Ini konsisten dengan siklus DRAFT->UNDER_REVIEW di §5 arsitektur, tapi kalau skripsi mendeskripsikan 'upload revisi langsung masuk review lagi', itu tidak sesuai — perlu submit ulang secara eksplisit."
+    }
+  ]
+}

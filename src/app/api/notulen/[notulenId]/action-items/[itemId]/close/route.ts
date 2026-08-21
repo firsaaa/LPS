@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import {
   getSessionUser, getUserProjectRole,
-  unauthorized, forbidden, notFound, ok,
+  unauthorized, forbidden, notFound, ok, badRequest,
 } from "@/lib/api-helpers";
 import { getNotulenProjectId, toggleActionItem } from "@/lib/services/notulen.service";
 
@@ -24,13 +24,17 @@ export async function POST(
 
   const body = await req.json().catch(() => ({}));
 
-  const updated = await toggleActionItem({
+  const result = await toggleActionItem({
     notulenId,
     itemId,
     requestedLinkedDocumentId: body.linkedDocumentId ?? null,
     closedNote: body.closedNote ?? null,
   });
-  if (!updated) return notFound("Action item tidak ditemukan");
+  if ("error" in result) {
+    if (result.error === "not_found") return notFound("Action item tidak ditemukan");
+    if (result.error === "evidence_required") return badRequest("Tindak lanjut ini mensyaratkan dokumen bukti — lampirkan dokumen dulu sebelum menutup");
+    return badRequest("Dokumen yang dilampirkan bukan jenis yang disyaratkan untuk tindak lanjut ini");
+  }
 
-  return ok(updated);
+  return ok(result);
 }
