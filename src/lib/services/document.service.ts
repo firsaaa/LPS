@@ -280,6 +280,21 @@ export function listDocumentTypeMasters() {
   return prisma.documentTypeMaster.findMany({ orderBy: { name: "asc" } });
 }
 
+// Komentar Team Leader saat meminta revisi (action=revise) — sebelumnya
+// dikirim oleh UI tapi diam-diam dibuang oleh approve/route.ts, tidak pernah
+// tersimpan di mana pun. Sekarang disimpan di detail audit_log (tidak perlu
+// kolom baru) dan diambil di sini untuk ditampilkan ke Engineer.
+export async function getLatestRevisionNote(documentId: string) {
+  const entry = await prisma.auditLog.findFirst({
+    where: { entity: "document", entityId: documentId, action: "REVISE" },
+    orderBy: { createdAt: "desc" },
+    include: { actor: { select: { name: true } } },
+  });
+  const notes = (entry?.detail as { notes?: string } | null)?.notes;
+  if (!notes) return null;
+  return { notes, actorName: entry!.actor?.name ?? null, createdAt: entry!.createdAt };
+}
+
 export function getDocumentDetail(documentId: string) {
   return prisma.document.findUnique({
     where: { id: documentId },
@@ -308,6 +323,7 @@ export async function updateDocumentStatus(params: {
   fromStatus: DocumentStatus;
   targetStatus: DocumentStatus;
   auditAction: "APPROVE" | "REVISE" | "SUBMIT" | "REJECT" | "ARCHIVE";
+  notes?: string | null;
 }) {
   return prisma.$transaction(async (tx) => {
     const d = await tx.document.update({
@@ -339,7 +355,7 @@ export async function updateDocumentStatus(params: {
         entity: "document",
         entityId: params.documentId,
         projectId: params.projectId,
-        detail: { from: params.fromStatus, to: params.targetStatus },
+        detail: { from: params.fromStatus, to: params.targetStatus, ...(params.notes ? { notes: params.notes } : {}) },
       },
     });
 

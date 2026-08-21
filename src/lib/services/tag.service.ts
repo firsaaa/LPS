@@ -8,8 +8,8 @@ export function listDocumentTags(documentId: string) {
   return prisma.documentTag.findMany({ where: { documentId }, include: { tag: true } });
 }
 
-// Tags are picked from the existing, fixed list only (not created on the fly)
-// so every tag keeps one consistent meaning (a document's type category).
+// Tags dapat diisi bebas sesuai kebutuhan pengguna — dibuat otomatis (upsert)
+// kalau namanya belum pernah ada, bukan dibatasi ke daftar tetap.
 export async function attachTag(
   documentId: string,
   rawName: string,
@@ -18,8 +18,7 @@ export async function attachTag(
   const name = rawName.trim().toLowerCase();
   if (!name) return { error: "Nama tag wajib diisi" };
 
-  const tag = await prisma.tag.findUnique({ where: { name } });
-  if (!tag) return { error: `Tag "${name}" belum terdaftar — pilih dari daftar tag yang tersedia` };
+  const tag = await prisma.tag.upsert({ where: { name }, create: { name }, update: {} });
 
   const existing = await prisma.documentTag.findUnique({
     where: { documentId_tagId: { documentId, tagId: tag.id } },

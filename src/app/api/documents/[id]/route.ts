@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { getSessionUser, getUserProjectRole, unauthorized, ok, forbidden, notFound, badRequest } from "@/lib/api-helpers";
-import { getDocumentDetail, getDocumentWithProject, canViewDocument, deleteOrArchiveDocument, resolveVisibilityBypass } from "@/lib/services/document.service";
+import { getDocumentDetail, getDocumentWithProject, canViewDocument, deleteOrArchiveDocument, resolveVisibilityBypass, getLatestRevisionNote } from "@/lib/services/document.service";
 
 /** GET /api/documents/[id] — full detail for the document detail page. */
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -18,7 +18,9 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
     if (!canViewDocument(role, doc.visibility, doc.status, resolveVisibilityBypass(role, doc.projectPhase.project))) return forbidden();
   }
 
-  return ok({ ...doc, viewerRole: role, viewerIsSuperadmin: user.isSuperadmin });
+  const revisionNote = doc.status === "REVISION_REQUESTED" ? await getLatestRevisionNote(id) : null;
+
+  return ok({ ...doc, viewerRole: role, viewerIsSuperadmin: user.isSuperadmin, revisionNote });
 }
 
 /**

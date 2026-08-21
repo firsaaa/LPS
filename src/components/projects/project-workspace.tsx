@@ -499,7 +499,11 @@ export function ProjectWorkspace({
 // ─── PhaseSection ─────────────────────────────────────────────────────────────
 
 function PhaseSection({ phase, canUpload, canReview, isLeader, userId, onUpload, onNewVersion, onDocAction, onTogglePhase, onSkipPhase, onAssign, pendingAssignments }: any) {
-  const docs: any[] = phase.documents ?? [];
+  // Dokumen dengan pembaruan terakhir ditaruh di urutan atas (bukan urutan
+  // unggah) — lebih mencerminkan apa yang baru saja berubah.
+  const docs: any[] = [...(phase.documents ?? [])].sort(
+    (a: any, b: any) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+  );
   const requiredDocs: any[] = phase.requiredDocs ?? [];
   const [expanded, setExpanded] = useState(phase.isActive || docs.length > 0);
 
@@ -662,17 +666,19 @@ function PhaseSection({ phase, canUpload, canReview, isLeader, userId, onUpload,
 function DocumentRow({ doc, canUpload, canReview, isLeader, onNewVersion, onAction }: any) {
   const currentVersion = doc.versions?.[0];
   const filePath = currentVersion?.filePath ?? doc.filePath;
+  const updatedRecently = doc.updatedAt && Date.now() - new Date(doc.updatedAt).getTime() < 3 * 24 * 60 * 60 * 1000;
 
   return (
-    <div className="flex items-start justify-between rounded-lg border border-gray-100 bg-gray-50 px-4 py-3 gap-3">
+    <div className={`flex items-start justify-between rounded-lg border px-4 py-3 gap-3 ${updatedRecently ? "border-blue-200 bg-blue-50/40" : "border-gray-100 bg-gray-50"}`}>
       <div className="flex items-start gap-3 min-w-0 flex-1">
         <FileText className="h-4 w-4 text-gray-400 shrink-0 mt-0.5" />
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <DocumentTitle code={doc.documentCode} title={doc.title} className="text-sm font-medium text-gray-900 truncate" />
+            <DocumentTitle code={doc.documentCode} title={doc.title} className={`text-sm truncate ${updatedRecently ? "font-bold text-gray-900" : "font-medium text-gray-900"}`} />
             <Badge variant={DOCUMENT_STATUS_VARIANT[doc.status as DocumentStatus] ?? "secondary"} className="text-xs shrink-0">
               {DOCUMENT_STATUS_LABELS[doc.status as DocumentStatus] ?? doc.status}
             </Badge>
+            {updatedRecently && <Badge variant="info" className="text-xs shrink-0">Baru diperbarui</Badge>}
           </div>
           <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
             <span>
@@ -1867,6 +1873,42 @@ function AttendeesPicker({ teamMembers, selectedIds, onChange }: { teamMembers: 
   );
 }
 
+// Peserta rapat yang bukan bagian dari tim proyek (mis. klien, pengawas
+// eksternal) — nama bebas ditulis, jabatan/instansi opsional sebagai keterangan.
+function ManualAttendeesInput({ entries, onChange }: { entries: { name: string; note: string }[]; onChange: (entries: { name: string; note: string }[]) => void }) {
+  const [name, setName] = useState("");
+  const [note, setNote] = useState("");
+
+  function add() {
+    if (!name.trim()) return;
+    onChange([...entries, { name: name.trim(), note: note.trim() }]);
+    setName(""); setNote("");
+  }
+
+  return (
+    <div className="space-y-2">
+      <Label className="text-xs text-gray-500">Peserta lain (di luar tim proyek)</Label>
+      {entries.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {entries.map((e, i) => (
+            <span key={i} className="flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs text-gray-700">
+              {e.name}{e.note && <span className="text-gray-400">· {e.note}</span>}
+              <button type="button" onClick={() => onChange(entries.filter((_, idx) => idx !== i))} aria-label={`Hapus ${e.name}`}>
+                <X className="h-3 w-3 text-gray-400 hover:text-gray-700" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="flex gap-2">
+        <Input placeholder="Nama" value={name} onChange={(e) => setName(e.target.value)} className="h-8 text-xs" onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} />
+        <Input placeholder="Jabatan/instansi (opsional)" value={note} onChange={(e) => setNote(e.target.value)} className="h-8 text-xs" onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} />
+        <Button type="button" size="sm" variant="outline" className="h-8 text-xs shrink-0" onClick={add}>Tambah</Button>
+      </div>
+    </div>
+  );
+}
+
 function CreateNotulenDialog({ projectId, teamMembers, onClose, onSuccess }: any) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -1877,6 +1919,7 @@ function CreateNotulenDialog({ projectId, teamMembers, onClose, onSuccess }: any
   const [meetingDate, setMeetingDate] = useState(new Date().toISOString().slice(0, 10));
   const [location, setLocation] = useState("");
   const [attendeeIds, setAttendeeIds] = useState<string[]>([]);
+  const [manualAttendees, setManualAttendees] = useState<{ name: string; note: string }[]>([]);
   const [discussion, setDiscussion] = useState("");
   const [docTypes, setDocTypes] = useState<any[]>([]);
   const [actionItems, setActionItems] = useState<{
@@ -1915,7 +1958,10 @@ function CreateNotulenDialog({ projectId, teamMembers, onClose, onSuccess }: any
     }
     setLoading(true);
     const validItems = actionItems.filter((a) => a.description.trim());
-    const attendeeNames = teamMembers.filter((m: any) => attendeeIds.includes(m.userId)).map((m: any) => m.user.name);
+    const attendeeNames = [
+      ...teamMembers.filter((m: any) => attendeeIds.includes(m.userId)).map((m: any) => m.user.name),
+      ...manualAttendees.map((a) => a.note ? `${a.name} (${a.note})` : a.name),
+    ];
     const resolvedType = meetingType === "Lainnya" ? meetingTypeOther.trim() : meetingType;
 
     const fd = new FormData();
@@ -2009,6 +2055,7 @@ function CreateNotulenDialog({ projectId, teamMembers, onClose, onSuccess }: any
             </div>
           </div>
           <AttendeesPicker teamMembers={teamMembers} selectedIds={attendeeIds} onChange={setAttendeeIds} />
+          <ManualAttendeesInput entries={manualAttendees} onChange={setManualAttendees} />
           <div className="space-y-2">
             <Label>Ringkasan Pembahasan</Label>
             <Textarea value={discussion} onChange={(e) => setDiscussion(e.target.value)}
@@ -2117,6 +2164,12 @@ function EditNotulenDialog({ notulen, teamMembers, onClose, onSuccess }: any) {
   const [attendeeIds, setAttendeeIds] = useState<string[]>(
     teamMembers.filter((m: any) => initialAttendeeNames.includes(m.user.name)).map((m: any) => m.userId)
   );
+  // Nama yang tidak cocok dengan anggota tim mana pun kemungkinan peserta manual
+  // yang ditambahkan sebelumnya — dipertahankan apa adanya (bukan diuraikan
+  // ulang jadi nama+keterangan) supaya tidak hilang saat notulen diedit.
+  const [manualAttendees, setManualAttendees] = useState<{ name: string; note: string }[]>(
+    initialAttendeeNames.filter((n: string) => !teamMembers.some((m: any) => m.user.name === n)).map((n: string) => ({ name: n, note: "" }))
+  );
   const [discussion, setDiscussion] = useState(notulen.discussion ?? "");
 
   async function submit() {
@@ -2125,7 +2178,10 @@ function EditNotulenDialog({ notulen, teamMembers, onClose, onSuccess }: any) {
       return;
     }
     setLoading(true);
-    const attendeeNames = teamMembers.filter((m: any) => attendeeIds.includes(m.userId)).map((m: any) => m.user.name);
+    const attendeeNames = [
+      ...teamMembers.filter((m: any) => attendeeIds.includes(m.userId)).map((m: any) => m.user.name),
+      ...manualAttendees.map((a) => a.note ? `${a.name} (${a.note})` : a.name),
+    ];
     const resolvedType = meetingType === "Lainnya" ? meetingTypeOther.trim() : meetingType;
     const res = await fetch(`/api/notulen/${notulen.id}`, {
       method: "PATCH", headers: { "Content-Type": "application/json" },
@@ -2180,6 +2236,7 @@ function EditNotulenDialog({ notulen, teamMembers, onClose, onSuccess }: any) {
             </div>
           </div>
           <AttendeesPicker teamMembers={teamMembers} selectedIds={attendeeIds} onChange={setAttendeeIds} />
+          <ManualAttendeesInput entries={manualAttendees} onChange={setManualAttendees} />
           <div className="space-y-2">
             <Label>Ringkasan Pembahasan</Label>
             <Textarea value={discussion} onChange={(e) => setDiscussion(e.target.value)} rows={3} />

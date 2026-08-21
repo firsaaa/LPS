@@ -240,18 +240,19 @@ export function DocumentsClient() {
             </span>
           </div>
           <div className="divide-y divide-gray-100">
-            {docs.map((doc: any) => {
+            {[...docs].sort((a: any, b: any) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()).map((doc: any) => {
               const currentVersion = doc.versions?.[0];
               const filePath = currentVersion?.filePath ?? doc.filePath;
               const phaseMeta = LPS_PHASES.find((p) => p.phase === doc.projectPhase?.phase);
+              const updatedRecently = doc.updatedAt && Date.now() - new Date(doc.updatedAt).getTime() < 3 * 24 * 60 * 60 * 1000;
               return (
-                <div key={doc.id} className="flex items-center gap-4 px-4 py-3 hover:bg-gray-50 transition-colors">
+                <div key={doc.id} className={`flex items-center gap-4 px-4 py-3 hover:bg-gray-50 transition-colors ${updatedRecently ? "bg-blue-50/40" : ""}`}>
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-gray-100">
                     <FileText className="h-3.5 w-3.5 text-gray-500" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <Link href={`/documents/${doc.id}`} className="text-sm font-medium text-gray-900 hover:text-blue-600 hover:underline truncate focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded">
+                      <Link href={`/documents/${doc.id}`} className={`text-sm hover:text-blue-600 hover:underline truncate focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded ${updatedRecently ? "font-bold text-gray-900" : "font-medium text-gray-900"}`}>
                         <DocumentTitle code={doc.documentCode} title={doc.title} />
                       </Link>
                       <Badge variant={DOCUMENT_STATUS_VARIANT[doc.status as DocumentStatus] ?? "secondary"} className="text-xs shrink-0">
@@ -262,6 +263,7 @@ export function DocumentsClient() {
                           {VERSION_STATUS_LABELS[currentVersion.status] ?? currentVersion.status}
                         </span>
                       )}
+                      {updatedRecently && <Badge variant="info" className="text-xs shrink-0">Baru diperbarui</Badge>}
                     </div>
                     <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
                       <span>

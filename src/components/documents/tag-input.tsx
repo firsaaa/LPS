@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { X, Plus } from "lucide-react";
 
-// Tags are picked from the existing, fixed list only — not free text. Every
-// tag has one consistent meaning (a document's type category), so letting
-// users type arbitrary new ones would immediately break that consistency.
+// Tag bebas diisi sesuai kebutuhan pengguna — mengetik nama yang belum ada
+// akan membuat tag baru (lihat attachTag di tag.service.ts), bukan dibatasi
+// ke daftar tetap.
 export function TagInput({
   tags,
   onAdd,
@@ -19,6 +19,7 @@ export function TagInput({
 }) {
   const [allTags, setAllTags] = useState<{ id: string; name: string }[]>([]);
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     fetch("/api/tags")
@@ -27,7 +28,19 @@ export function TagInput({
       .catch(() => {});
   }, []);
 
+  const normalizedQuery = query.trim().toLowerCase();
   const available = allTags.filter((t) => !tags.some((tg) => tg.name === t.name));
+  const filtered = useMemo(
+    () => (normalizedQuery ? available.filter((t) => t.name.includes(normalizedQuery)) : available),
+    [available, normalizedQuery]
+  );
+  const exactMatchExists = available.some((t) => t.name === normalizedQuery) || tags.some((t) => t.name === normalizedQuery);
+
+  function addAndClose(name: string) {
+    onAdd(name);
+    setQuery("");
+    setOpen(false);
+  }
 
   return (
     <div>
@@ -60,26 +73,51 @@ export function TagInput({
             onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); }}
             className="inline-flex items-center gap-1 rounded-md border border-dashed border-gray-300 px-2.5 py-1 text-xs text-gray-500 hover:border-blue-400 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <Plus className="h-3 w-3" /> Pilih Tag
+            <Plus className="h-3 w-3" /> Tambah Tag
           </button>
           {open && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-              <div className="absolute z-20 mt-1 w-56 max-h-56 overflow-y-auto rounded-md border border-gray-200 bg-white py-1 shadow-md">
-                {available.length === 0 ? (
-                  <p className="px-2.5 py-1.5 text-xs text-gray-400">Semua tag sudah ditambahkan</p>
-                ) : (
-                  available.map((t) => (
+              <div className="absolute z-20 mt-1 w-56 rounded-md border border-gray-200 bg-white shadow-md">
+                <input
+                  autoFocus
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && normalizedQuery && !exactMatchExists) {
+                      e.preventDefault();
+                      addAndClose(normalizedQuery);
+                    }
+                    if (e.key === "Escape") setOpen(false);
+                  }}
+                  placeholder="Cari atau ketik tag baru..."
+                  className="w-full border-b border-gray-100 px-2.5 py-1.5 text-xs text-gray-700 focus:outline-none"
+                />
+                <div className="max-h-48 overflow-y-auto py-1">
+                  {normalizedQuery && !exactMatchExists && (
                     <button
-                      key={t.id}
                       type="button"
-                      onClick={() => { onAdd(t.name); setOpen(false); }}
-                      className="flex w-full items-center px-2.5 py-1.5 text-left text-xs text-gray-700 hover:bg-gray-50 focus:outline-none focus:bg-gray-100"
+                      onClick={() => addAndClose(normalizedQuery)}
+                      className="flex w-full items-center gap-1 px-2.5 py-1.5 text-left text-xs text-blue-600 hover:bg-blue-50 focus:outline-none focus:bg-blue-50"
                     >
-                      {t.name}
+                      <Plus className="h-3 w-3" /> Buat tag &quot;{normalizedQuery}&quot;
                     </button>
-                  ))
-                )}
+                  )}
+                  {filtered.length === 0 && !normalizedQuery ? (
+                    <p className="px-2.5 py-1.5 text-xs text-gray-400">Semua tag sudah ditambahkan</p>
+                  ) : (
+                    filtered.map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => addAndClose(t.name)}
+                        className="flex w-full items-center px-2.5 py-1.5 text-left text-xs text-gray-700 hover:bg-gray-50 focus:outline-none focus:bg-gray-100"
+                      >
+                        {t.name}
+                      </button>
+                    ))
+                  )}
+                </div>
               </div>
             </>
           )}

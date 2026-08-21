@@ -54,8 +54,9 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params;
 
   // Team Leader can delete their own project, same as Superadmin — the real
-  // safety net is inside deleteProject() (rejects if the project has any
-  // non-draft/legal-hold document), not who's allowed to call this.
+  // safety net is inside deleteProject() (rejects if the project has a
+  // legal-hold document, or once its contract document is APPROVED), not
+  // who's allowed to call this.
   if (!user.isSuperadmin) {
     const role = await getUserProjectRole(user.id, id);
     if (role !== "TEAM_LEADER") return forbidden();
@@ -66,7 +67,7 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
     return badRequest(
       result.error === "legal_hold"
         ? "Proyek memiliki dokumen yang ditandai wajib disimpan (legal hold) — tidak bisa dihapus"
-        : "Proyek memiliki riwayat dokumen (sudah ada yang bukan draft) — arsipkan proyek ini alih-alih menghapusnya"
+        : "Kontrak proyek ini sudah disetujui — proyek tidak bisa dihapus lagi, arsipkan alih-alih menghapusnya"
     );
   }
   return ok({ success: true });

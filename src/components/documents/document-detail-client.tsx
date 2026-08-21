@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, ShieldAlert, ExternalLink, Trash2 } from "lucide-react";
+import { ArrowLeft, Loader2, ShieldAlert, ExternalLink, Trash2, RotateCcw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { LPS_PHASES, DOCUMENT_STATUS_LABELS, DOCUMENT_STATUS_VARIANT, DOCUMENT_V
 import type { DocumentVisibility, DocumentStatus } from "@/types";
 import { formatDate, parseErrorMessage } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { VersionStatusBadge, VERSION_STATUS_LABELS } from "@/components/documents/version-status-badge";
+import { VersionStatusBadge } from "@/components/documents/version-status-badge";
 import { TagInput } from "@/components/documents/tag-input";
 import { DocumentTitle } from "@/components/documents/document-title";
 import { DocumentReferencesPanel } from "@/components/documents/document-references-panel";
@@ -59,13 +59,15 @@ export function DocumentDetailClient({ documentId, userId }: { documentId: strin
 
   useEffect(() => { load(); }, [load]);
 
-  // OCR runs in the background after upload — poll briefly so the "sedang
-  // diproses" notice clears on its own once it's done, no manual refresh needed.
+  // Poll while: (a) OCR masih diproses di latar belakang, atau (b) dokumen
+  // sedang UNDER_REVIEW — supaya begitu Team Leader menyetujui/meminta revisi
+  // di tempat lain, Engineer yang sedang membuka halaman ini melihat status
+  // berubah sendiri tanpa perlu refresh manual.
   useEffect(() => {
-    if (!doc?.contentTextPending) return;
+    if (!doc?.contentTextPending && doc?.status !== "UNDER_REVIEW") return;
     const t = setInterval(load, 4000);
     return () => clearInterval(t);
-  }, [doc?.contentTextPending, load]);
+  }, [doc?.contentTextPending, doc?.status, load]);
 
   async function setVisibilityFlags(inspector: boolean, client: boolean) {
     const visibility = flagsToVisibility(inspector, client);
@@ -145,6 +147,18 @@ export function DocumentDetailClient({ documentId, userId }: { documentId: strin
           </Button>
         )}
       </div>
+
+      {doc.status === "REVISION_REQUESTED" && doc.revisionNote && (
+        <div className="flex items-start gap-2.5 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
+          <RotateCcw className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-amber-800 uppercase tracking-wide">
+              Catatan revisi dari {doc.revisionNote.actorName ?? "Team Leader"}
+            </p>
+            <p className="text-sm text-amber-900 mt-0.5">{doc.revisionNote.notes}</p>
+          </div>
+        </div>
+      )}
 
       {doc.filePath && doc.contentTextPending && (
         <div className="flex items-start gap-2.5 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
@@ -277,16 +291,21 @@ export function DocumentDetailClient({ documentId, userId }: { documentId: strin
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-gray-900">v{v.versionNumber}</span>
                   <span className="font-mono text-xs text-gray-400">{doc.documentCode}</span>
-                  {v.isCurrent && <Badge variant="info" className="text-xs">Terkini</Badge>}
+                  <Badge variant={v.isCurrent ? "success" : "secondary"} className="text-xs">
+                    {v.isCurrent ? "Aktif" : "Tidak Aktif"}
+                  </Badge>
                 </div>
                 <p className="text-xs text-gray-500 mt-0.5">
                   {v.createdBy?.name} · {formatDate(v.createdAt)}
                   {v.approvedBy?.name && <> · Disetujui oleh {v.approvedBy.name}</>}
                 </p>
-                {v.changeNotes && <p className="text-xs text-gray-400 mt-0.5">{v.changeNotes}</p>}
+                {v.changeNotes && (
+                  <p className={v.isCurrent ? "text-xs font-bold text-black mt-0.5" : "text-xs text-gray-400 mt-0.5"}>
+                    {v.changeNotes}
+                  </p>
+                )}
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <span className="text-xs text-gray-400">{VERSION_STATUS_LABELS[v.status] ?? v.status}</span>
                 {v.filePath && (
                   <a href={v.filePath} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline">
                     <ExternalLink className="h-3 w-3" /> Buka

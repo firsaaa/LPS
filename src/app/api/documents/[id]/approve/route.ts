@@ -30,7 +30,7 @@ export async function POST(
   if (!role) return forbidden();
 
   const body = await req.json();
-  const { action } = body as { action: string };
+  const { action, notes } = body as { action: string; notes?: string };
   const targetStatus = ACTION_MAP[action];
   if (!targetStatus) return badRequest("action tidak valid (submit|approve|revise|reject|archive)");
 
@@ -61,7 +61,7 @@ export async function POST(
   const auditAction = AUDIT_ACTION_MAP[action];
 
   const updated = await updateDocumentStatus({
-    documentId, actorId: user.id, projectId, fromStatus: doc.status, targetStatus, auditAction,
+    documentId, actorId: user.id, projectId, fromStatus: doc.status, targetStatus, auditAction, notes,
   });
 
   return ok(updated);

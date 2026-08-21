@@ -295,14 +295,22 @@ export async function updateProject(id: string, actor: { id: string; isSuperadmi
  * no document has left DRAFT — i.e. it never accumulated real project
  * history worth preserving. A project with real history should be archived
  * (ProjectStatus.ARCHIVED), not deleted.
+ *
+ * Gate narrowed to specifically the contract (KTR) document: once the
+ * contract itself is APPROVED, the project is contractually committed and
+ * must not be deletable — but a project can still be deleted freely before
+ * that (even with other non-draft documents in progress), matching the real
+ * point of no return the author identified rather than any non-draft document.
  */
 export async function deleteProject(id: string) {
   const documents = await prisma.document.findMany({
     where: { projectId: id },
-    select: { legalHold: true, status: true },
+    select: { legalHold: true, status: true, documentTypeMaster: { select: { typeCode: true } } },
   });
   if (documents.some((d) => d.legalHold)) return { error: "legal_hold" as const };
-  if (documents.some((d) => d.status !== "DRAFT")) return { error: "has_history" as const };
+  if (documents.some((d) => d.documentTypeMaster?.typeCode === "KTR" && d.status === "APPROVED")) {
+    return { error: "contract_approved" as const };
+  }
 
   await prisma.project.delete({ where: { id } });
   return { success: true as const };
