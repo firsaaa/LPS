@@ -1,5 +1,5 @@
 {
-  "dijalankan": "2026-08-21T12:36:52.761Z",
+  "dijalankan": "2026-08-21T17:18:30.181Z",
   "total": 11,
   "pass": 11,
   "fail": 0,
@@ -9,23 +9,23 @@
       "jenis": "Positive",
       "deskripsi": "Upload dokumen ke fase aktif (ASSESSMENT) dengan jenis dokumen valid (DOC)",
       "expected": "HTTP 201; document.projectPhaseId = fase yang dipilih; document.documentTypeId = jenis yang dipilih; documentCode terbentuk otomatis (tidak kosong)",
-      "actual": "HTTP 201; projectPhaseId=cmsvrf4mo0011dnrjm10vp6p3; documentTypeId=cmsvrf2kv000ddnrjgmd2owtm; documentCode=LGM-ASM-DOC-006",
+      "actual": "HTTP 201; projectPhaseId=cmsvrf4mo0011dnrjm10vp6p3; documentTypeId=cmsvrf2kv000ddnrjgmd2owtm; documentCode=LGM-ASM-DOC-008",
       "status": "PASS"
     },
     {
       "kode": "FN-08",
       "jenis": "Positive",
       "deskripsi": "Pola documentCode hasil FN-07 sesuai document-code.service.ts (buildCodePrefix + generateDocumentCode)",
-      "expected": "documentCode = \"LGM-ASM-DOC-006\" (prefix proyek+fase+tipe dari buildCodePrefix(), urut 3-digit dari generateDocumentCode())",
-      "actual": "documentCode = \"LGM-ASM-DOC-006\"",
+      "expected": "documentCode = \"LGM-ASM-DOC-008\" (prefix proyek+fase+tipe dari buildCodePrefix(), urut 3-digit dari generateDocumentCode())",
+      "actual": "documentCode = \"LGM-ASM-DOC-008\"",
       "status": "PASS"
     },
     {
       "kode": "FN-09",
       "jenis": "Positive",
       "deskripsi": "Upload dua dokumen berjenis sama pada project+fase yang sama — nomor urut bertambah, tidak duplikat",
-      "expected": "Dokumen kedua mendapat documentCode \"LGM-ASM-DOC-007\" (bertambah 1 dari dokumen pertama), berbeda dari dokumen pertama",
-      "actual": "HTTP 201; documentCode kedua=\"LGM-ASM-DOC-007\"; documentCode pertama=\"LGM-ASM-DOC-006\"",
+      "expected": "Dokumen kedua mendapat documentCode \"LGM-ASM-DOC-009\" (bertambah 1 dari dokumen pertama), berbeda dari dokumen pertama",
+      "actual": "HTTP 201; documentCode kedua=\"LGM-ASM-DOC-009\"; documentCode pertama=\"LGM-ASM-DOC-008\"",
       "status": "PASS"
     },
     {

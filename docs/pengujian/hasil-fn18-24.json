@@ -1,5 +1,5 @@
 {
-  "dijalankan": "2026-08-21T12:37:05.832Z",
+  "dijalankan": "2026-08-21T17:18:34.962Z",
   "total": 7,
   "pass": 7,
   "fail": 0,
@@ -17,7 +17,7 @@
       "jenis": "Positive",
       "deskripsi": "Superadmin mengubah data pengguna yang sudah ada (nama & status aktif) lewat PATCH /api/users/[id]",
       "expected": "HTTP 2xx, perubahan tersimpan di database, updatedAt berubah (bertambah)",
-      "actual": "HTTP 200; name sesudah=\"User Uji FN-19 (Diubah)\"; isActive sesudah=false; updatedAt sebelum=2026-08-21T12:37:03.362Z, sesudah=2026-08-21T12:37:04.762Z",
+      "actual": "HTTP 200; name sesudah=\"User Uji FN-19 (Diubah)\"; isActive sesudah=false; updatedAt sebelum=2026-08-21T17:18:32.362Z, sesudah=2026-08-21T17:18:33.793Z",
       "status": "PASS"
     },
     {
@@ -33,7 +33,7 @@
       "jenis": "Positive",
       "deskripsi": "Engineer submit dokumen DRAFT, lalu Team Leader project menyetujuinya (POST .../approve)",
       "expected": "Status berpindah DRAFT -> UNDER_REVIEW -> APPROVED; approvedById dan approvedAt terisi",
-      "actual": "Transisi status: DRAFT -> UNDER_REVIEW -> APPROVED (DB akhir: APPROVED). DocumentVersion (isCurrent) approvedById=cmsvrf3j5000rdnrj1tim8jvf, approvedAt=2026-08-21T12:37:05.116Z (terisi: true) — SETELAH PERBAIKAN updateDocumentStatus() di document.service.ts (lihat temuan riwayat sebelumnya: field ini sebelumnya tidak pernah terisi lewat endpoint ini, sekarang sudah diperbaiki atas persetujuan eksplisit penulis).",
+      "actual": "Transisi status: DRAFT -> UNDER_REVIEW -> APPROVED (DB akhir: APPROVED). DocumentVersion (isCurrent) approvedById=cmsvrf3j5000rdnrj1tim8jvf, approvedAt=2026-08-21T17:18:34.155Z (terisi: true) — SETELAH PERBAIKAN updateDocumentStatus() di document.service.ts (lihat temuan riwayat sebelumnya: field ini sebelumnya tidak pernah terisi lewat endpoint ini, sekarang sudah diperbaiki atas persetujuan eksplisit penulis).",
       "status": "PASS"
     },
     {

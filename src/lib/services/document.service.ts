@@ -213,7 +213,7 @@ export async function searchDocuments(
         select: {
           id: true,
           phase: true,
-          project: { select: { id: true, name: true } },
+          project: { select: { id: true, name: true, inspectorSeesAllDocuments: true, clientSeesAllDocuments: true } },
         },
       },
       versions: {
@@ -229,7 +229,7 @@ export async function searchDocuments(
   if (user.isSuperadmin) return results;
   return results.filter((d) => {
     const role = effectiveRoleForProject(d.projectPhase.project.id, roleMap!, user.isGlobalInspector);
-    return canViewDocument(role, d.visibility, d.status);
+    return canViewDocument(role, d.visibility, d.status, resolveVisibilityBypass(role, d.projectPhase.project));
   });
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Search, FileText, Loader2, ExternalLink, ChevronDown, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -15,24 +16,35 @@ import { DocumentTitle } from "@/components/documents/document-title";
 import { handleSessionExpired } from "@/lib/session-expired";
 
 export function DocumentsClient() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  // Dibaca sekali saat mount (lazy initializer) — nilai selanjutnya dikelola
+  // oleh state seperti biasa, URL cuma disinkronkan SATU ARAH (state -> URL)
+  // di efek pencarian di bawah supaya tidak saling menimpa.
+  const initial = useRef(searchParams).current;
+
   const [docs, setDocs] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
   const [types, setTypes] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const [keyword, setKeyword] = useState("");
-  const [projectId, setProjectId] = useState("all");
-  const [phase, setPhase] = useState("all");
-  const [documentTypeId, setDocumentTypeId] = useState("all");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [dueDateFrom, setDueDateFrom] = useState("");
-  const [dueDateTo, setDueDateTo] = useState("");
-  const [documentCode, setDocumentCode] = useState("");
-  const [tags, setTags] = useState("");
-  const [status, setStatus] = useState("all");
-  const [uploaderName, setUploaderName] = useState("");
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [keyword, setKeyword] = useState(() => initial.get("keyword") ?? "");
+  const [projectId, setProjectId] = useState(() => initial.get("project_id") ?? "all");
+  const [phase, setPhase] = useState(() => initial.get("phase") ?? "all");
+  const [documentTypeId, setDocumentTypeId] = useState(() => initial.get("document_type_id") ?? "all");
+  const [dateFrom, setDateFrom] = useState(() => initial.get("date_from") ?? "");
+  const [dateTo, setDateTo] = useState(() => initial.get("date_to") ?? "");
+  const [dueDateFrom, setDueDateFrom] = useState(() => initial.get("due_date_from") ?? "");
+  const [dueDateTo, setDueDateTo] = useState(() => initial.get("due_date_to") ?? "");
+  const [documentCode, setDocumentCode] = useState(() => initial.get("document_code") ?? "");
+  const [tags, setTags] = useState(() => initial.getAll("tags").join(", "));
+  const [status, setStatus] = useState(() => initial.get("status") ?? "all");
+  const [uploaderName, setUploaderName] = useState(() => initial.get("uploader") ?? "");
+  const [showAdvanced, setShowAdvanced] = useState(() =>
+    !!(initial.get("date_from") || initial.get("date_to") || initial.get("due_date_from") || initial.get("due_date_to")
+      || initial.get("document_code") || initial.get("uploader") || (initial.get("status") && initial.get("status") !== "all"))
+  );
 
   useEffect(() => {
     fetch("/api/projects").then((r) => (r.ok ? r.json() : [])).then(setProjects).catch(() => {});
@@ -56,6 +68,12 @@ export function DocumentsClient() {
       if (uploaderName) params.set("uploader", uploaderName);
       tags.split(",").map((t) => t.trim()).filter(Boolean).forEach((t) => params.append("tags", t));
 
+      // Simpan filter ke URL supaya bertahan lewat navigasi (buka dokumen lalu
+      // kembali lewat tombol back) dan reload halaman — bukan cuma state lokal
+      // komponen ini yang reset tiap kali di-mount ulang.
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+
       const res = await fetch(`/api/documents/search?${params}`);
       if (res.status === 401) { handleSessionExpired(); return; }
       if (res.ok) {
@@ -65,7 +83,7 @@ export function DocumentsClient() {
     } finally {
       setLoading(false);
     }
-  }, [keyword, projectId, phase, documentTypeId, dateFrom, dateTo, dueDateFrom, dueDateTo, documentCode, status, uploaderName, tags]);
+  }, [keyword, projectId, phase, documentTypeId, dateFrom, dateTo, dueDateFrom, dueDateTo, documentCode, status, uploaderName, tags, router, pathname]);
 
   useEffect(() => {
     const t = setTimeout(search, 400);
